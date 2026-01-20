@@ -1,119 +1,96 @@
-import Link from 'next/link';
-import { Mail, Twitter, Linkedin, Github } from 'lucide-react';
+import Link from "next/link";
+import { Mail, Twitter, Linkedin, Github } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="px-6 py-8 md:py-10">
-      <div className="container mx-auto max-w-6xl">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-16 mb-6 items-start">
-          <div className="md:col-span-1 space-y-3">
+    <footer className="relative mt-32 min-h-[50vh] bg-[#030303] border-t border-white/[0.06] flex flex-col justify-between overflow-hidden">
+      
+      {/* Ambient Glow */}
+      <div className="pointer-events-none absolute bottom-0 left-1/2 h-[520px] w-[900px] -translate-x-1/2 translate-y-1/3 rounded-full bg-purple-600/15 blur-[160px]" />
+
+      {/* Main Content */}
+      <div className="relative mx-auto max-w-7xl px-6 py-16 md:py-20 lg:py-24 w-full">
+        <div className="grid grid-cols-1 gap-12 md:gap-16 lg:gap-8 md:grid-cols-2 lg:grid-cols-12 items-start w-full">
+
+          {/* Brand */}
+          <div className="lg:col-span-5 space-y-4">
             <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-purple-300 bg-clip-text text-transparent">
               Elara AI
             </h3>
-            <p className="text-[var(--text-secondary)] text-sm md:text-base leading-relaxed max-w-xs">
-              AI-powered voice booking platform that transforms how you handle customer communications.
+            <p className="max-w-md text-gray-400 leading-relaxed text-base md:text-lg">
+              AI-powered voice booking platform that transforms how you handle customer communications 24/7.
             </p>
           </div>
-          
-          <div className="md:col-span-1">
-            <h4 className="font-semibold mb-4">Product</h4>
-            <ul className="space-y-2 text-sm md:text-base">
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Features
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Integrations
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  API
-                </Link>
-              </li>
+
+          {/* Explore */}
+          <div className="lg:col-span-2">
+            <h4 className="mb-6 text-xs font-semibold uppercase tracking-[0.3em] text-white/40">
+              Explore
+            </h4>
+            <ul className="space-y-3">
+              {["Features", "About", "Contact", "Help Center"].map((item) => (
+                <li key={item}>
+                  <Link
+                    href="#"
+                    className="text-gray-400 hover:text-purple-400 text-sm md:text-base transition-all duration-300"
+                  >
+                    {item}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
-          
-          <div className="md:col-span-1">
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-2 text-sm md:text-base">
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Careers
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Contact
-                </Link>
-              </li>
+
+          {/* Support */}
+          <div className="lg:col-span-2">
+            <h4 className="mb-6 text-xs font-semibold uppercase tracking-[0.3em] text-white/40">
+              Support
+            </h4>
+            <ul className="space-y-3">
+              {["Documentation", "Privacy Policy", "Terms of Service"].map(
+                (item) => (
+                  <li key={item}>
+                    <Link
+                      href="#"
+                      className="text-gray-400 hover:text-purple-400 text-sm md:text-base transition-all duration-300"
+                    >
+                      {item}
+                    </Link>
+                  </li>
+                )
+              )}
             </ul>
           </div>
-          
-          <div className="md:col-span-1">
-            <h4 className="font-semibold mb-4">Support</h4>
-            <ul className="space-y-2 text-sm md:text-base">
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Documentation
+
+          {/* Social */}
+          <div className="lg:col-span-3">
+            <h4 className="mb-6 text-xs font-semibold uppercase tracking-[0.3em] text-white/40 lg:text-right">
+              Follow us
+            </h4>
+            <div className="flex gap-3 lg:justify-end">
+              {[Mail, Twitter, Linkedin, Github].map((Icon, idx) => (
+                <Link
+                  key={idx}
+                  href="#"
+                  className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-all duration-300 hover:border-purple-500/40 hover:bg-purple-500/10 hover:text-white"
+                >
+                  <Icon className="h-5 w-5 group-hover:scale-110 transition-transform" />
                 </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Help Center
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
-            </ul>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-2 border-t border-[var(--border)]">
-        <div className="container mx-auto max-w-6xl flex flex-col md:flex-row justify-between items-center gap-4 py-5">
-          <p className="text-[var(--text-muted)] text-sm">
+      {/* Bottom Bar */}
+      <div className="border-t border-white/[0.06] w-full mt-auto">
+        <div className="mx-auto max-w-7xl px-6 py-6 md:py-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm text-gray-500">
             © 2024 Elara AI. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
-            <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-              <Mail className="w-5 h-5" />
-            </Link>
-            <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-              <Twitter className="w-5 h-5" />
-            </Link>
-            <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-              <Linkedin className="w-5 h-5" />
-            </Link>
-            <Link href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-              <Github className="w-5 h-5" />
-            </Link>
-          </div>
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+            Powered by <span className="text-gray-400">FynkTech</span>
+          </p>
         </div>
       </div>
     </footer>

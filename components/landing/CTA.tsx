@@ -5,7 +5,17 @@ import Link from 'next/link';
 
 export default function CTA() {
   return (
-    <section className="landing-section cta-section relative overflow-hidden gradient-primary">
+    <section 
+      className="relative overflow-hidden"
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        minHeight: '70vh',
+        textAlign: 'center',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #1E1E5F 0%, #7B4FFF 100%)'
+      }}
+    >
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-10">
         <div 
@@ -16,8 +26,24 @@ export default function CTA() {
         ></div>
       </div>
       
-      <div className="landing-section-content container relative z-10 py-24 md:py-32 px-6">
-        <div className="max-w-4xl mx-auto text-center cta-content">
+      <div 
+        className="relative z-10 py-24 md:py-32 px-6"
+        style={{
+          width: '100%',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '0 24px'
+        }}
+      >
+        <div 
+          className="max-w-4xl mx-auto text-center"
+          style={{
+            maxWidth: '700px',
+            margin: '0 auto',
+            textAlign: 'center',
+            alignItems: 'center'
+          }}
+        >
           <div className="relative z-10">
             <h2 className="text-4xl md:text-6xl font-bold mb-8">
               Ready to Let Elara Handle Your Calls?
@@ -26,15 +52,21 @@ export default function CTA() {
               Join thousands of businesses that trust Elara to manage their bookings 
               and provide exceptional customer service around the clock.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center mb-8 cta-buttons">
+            <div 
+              className="flex flex-col sm:flex-row justify-center mb-8"
+              style={{
+                marginTop: '48px',
+                gap: '24px'
+              }}
+            >
               <Link
                 href="/dashboard"
-                className="px-8 py-4 rounded-lg bg-white text-[var(--deep-blue)] font-semibold flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors shadow-lg"
+                className="px-8 md:px-10 py-[14px] rounded-full bg-white text-[var(--deep-blue)] text-base md:text-lg font-semibold flex items-center justify-center gap-3 hover:bg-gray-100 hover:scale-[1.03] transition-transform transition-colors shadow-xl"
               >
                 Start Free Trial
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              <button className="px-8 py-4 rounded-lg bg-white/10 backdrop-blur-sm text-white font-semibold border border-white/20 hover:bg-white/20 transition-colors">
+              <button className="px-8 md:px-10 py-[14px] rounded-full bg-white/10 backdrop-blur-sm text-white text-base md:text-lg font-semibold border border-white/20 hover:bg-white/20 hover:scale-[1.03] transition-transform transition-colors">
                 Schedule Demo
               </button>
             </div>

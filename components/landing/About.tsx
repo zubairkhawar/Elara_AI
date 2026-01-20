@@ -1,77 +1,141 @@
+import { Sparkles, Clock, Zap } from 'lucide-react';
+
 export default function About() {
+  const features = [
+    {
+      icon: Sparkles,
+      title: 'Intelligent Voice AI',
+      desc: 'Elara uses advanced natural language processing to understand context and provide responses that feel natural and human-like.'
+    },
+    {
+      icon: Clock,
+      title: '24/7 Availability',
+      desc: 'Never miss a booking. Elara works around the clock to capture leads and manage your calendar even when you are offline.'
+    },
+    {
+      icon: Zap,
+      title: 'Seamless Integration',
+      desc: 'Connect Elara with your existing calendar, CRM, and booking systems. Sync appointments automatically in perfect harmony.'
+    }
+  ];
+
   return (
-    <section className="landing-section about-section px-6 py-24 md:py-32">
-      <div className="landing-section-content container max-w-6xl">
-        <div className="text-center mb-20">
-          <h2 className="text-4xl md:text-6xl font-bold mb-5">
+    /* Increased height with py-48 and lg:py-64 */
+    <section 
+      className="relative overflow-hidden px-6 py-32 md:py-48 lg:py-64 bg-gradient-to-b from-[var(--scaffold-color)] to-[var(--scaffold-color)]"
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        minHeight: '80vh'
+      }}
+    >
+      
+      {/* Background Accent Glow */}
+      <div className="pointer-events-none absolute -right-24 top-1/2 h-[500px] w-[500px] -translate-y-1/2 rounded-full bg-purple-600/5 blur-[120px]" />
+
+      <div 
+        className="relative max-w-7xl mx-auto flex flex-col items-center"
+        style={{
+          width: '100%'
+        }}
+      >
+        {/* Header Section */}
+        <div className="text-center mb-20 md:mb-28">
+          <h2 
+            className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tighter text-white"
+            style={{
+              marginBottom: '48px',
+              marginTop: '48px'
+            }}
+          >
             About Elara AI
           </h2>
-          <p className="text-xl md:text-2xl text-[var(--text-secondary)] max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-[var(--text-secondary)] max-w-3xl mx-auto leading-relaxed opacity-80">
             Revolutionizing how businesses handle customer communications
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 items-center about-grid gap-12">
-          <div className="space-y-6">
-            <div className="p-8 rounded-2xl bg-[var(--card-color)] border border-[var(--border)] hover:border-[var(--border-hover)] hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 text-left">
-              <h3 className="text-2xl font-semibold mb-3">Intelligent Voice AI</h3>
-              <p className="text-[var(--text-secondary)] leading-relaxed text-base md:text-lg">
-                Elara uses advanced natural language processing to understand context, 
-                handle complex requests, and provide personalized responses that feel 
-                natural and human-like.
-              </p>
-            </div>
-            
-            <div className="p-8 rounded-2xl bg-[var(--card-color)] border border-[var(--border)] hover:border-[var(--border-hover)] hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 text-left">
-              <h3 className="text-2xl font-semibold mb-3">24/7 Availability</h3>
-              <p className="text-[var(--text-secondary)] leading-relaxed text-base md:text-lg">
-                Never miss a booking opportunity. Elara works around the clock to 
-                capture leads, schedule appointments, and manage your calendar 
-                even when you're not available.
-              </p>
-            </div>
-            
-            <div className="p-8 rounded-2xl bg-[var(--card-color)] border border-[var(--border)] hover:border-[var(--border-hover)] hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 text-left">
-              <h3 className="text-2xl font-semibold mb-3">Seamless Integration</h3>
-              <p className="text-[var(--text-secondary)] leading-relaxed text-base md:text-lg">
-                Connect Elara with your existing calendar, CRM, and booking systems. 
-                Sync appointments automatically and keep all your tools in perfect harmony.
-              </p>
-            </div>
+        {/* Layout Grid: 0.9fr to 1.1fr split for visual balance */}
+        <div 
+          className="grid lg:grid-cols-[1fr_1.1fr] items-center gap-16 md:gap-24 w-full"
+          style={{
+            gap: '60px'
+          }}
+        >
+          
+          {/* Left Side: Feature Cards */}
+          <div className="space-y-8 md:space-y-10 w-full">
+            {features.map((item, idx) => (
+              <div key={idx} className="group relative p-8 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] hover:border-purple-500/30 transition-all duration-500">
+                <div className="flex gap-6 items-start">
+                  <div className="mt-1 p-3 rounded-xl bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
+                    <item.icon size={24} />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
+                      {item.title}
+                    </h3>
+                    <p className="text-[var(--text-secondary)] leading-relaxed text-lg opacity-70">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
           
-          <div className="relative opacity-90 chat-mockup">
-            <div className="gradient-subtle rounded-3xl p-8 md:p-10 border border-[var(--border)] max-w-md mx-auto md:mx-0 shadow-lg shadow-purple-500/10">
-              <div className="space-y-5">
-                <div className="flex items-start gap-4 p-5 bg-[var(--scaffold-color)] rounded-2xl">
-                  <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold">E</span>
+          {/* Right Side: Chat UI Mockup */}
+          <div 
+            className="relative w-full"
+            style={{
+              transform: 'scale(1)',
+              opacity: 1
+            }}
+          >
+            {/* Subtle glow behind the chat box */}
+            <div className="absolute inset-0 bg-purple-500/20 blur-[80px] rounded-full scale-75" />
+            
+            <div className="relative rounded-[2.5rem] bg-[#0A0A0F]/60 backdrop-blur-2xl p-8 md:p-12 border border-white/[0.1] shadow-2xl">
+              <div className="space-y-8">
+                {/* Message 1 */}
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/20">
+                    <span className="text-white font-black">E</span>
                   </div>
-                  <div className="text-left">
-                    <p className="text-[var(--text-primary)] font-medium mb-1">Elara AI</p>
-                    <p className="text-[var(--text-secondary)] text-sm leading-relaxed">Hello! I'm Elara, your AI assistant. How can I help you today?</p>
+                  <div className="bg-white/5 p-5 rounded-2xl rounded-tl-none border border-white/5">
+                    <p className="text-white font-semibold text-sm mb-1">Elara AI</p>
+                    <p className="text-[var(--text-secondary)] text-base leading-relaxed">
+                      Hello! I'm Elara, your AI assistant. How can I help you today?
+                    </p>
                   </div>
                 </div>
                 
-                <div className="flex items-start gap-4 p-5 bg-[var(--card-color)] rounded-2xl ml-12">
-                  <div className="text-left">
-                    <p className="text-[var(--text-primary)] font-medium mb-1">Customer</p>
-                    <p className="text-[var(--text-secondary)] text-sm leading-relaxed">I'd like to book an appointment for next Tuesday at 2 PM</p>
+                {/* Message 2 */}
+                <div className="flex items-start gap-4 justify-end">
+                  <div className="bg-purple-600/20 p-5 rounded-2xl rounded-tr-none border border-purple-500/20 max-w-[80%]">
+                    <p className="text-purple-300 font-semibold text-sm mb-1 text-right">Customer</p>
+                    <p className="text-white text-base leading-relaxed text-right">
+                      I'd like to book an appointment for next Tuesday at 2 PM.
+                    </p>
                   </div>
                 </div>
                 
-                <div className="flex items-start gap-4 p-5 bg-[var(--scaffold-color)] rounded-2xl">
-                  <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold">E</span>
+                {/* Message 3 */}
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-black">E</span>
                   </div>
-                  <div className="text-left">
-                    <p className="text-[var(--text-primary)] font-medium mb-1">Elara AI</p>
-                    <p className="text-[var(--text-secondary)] text-sm leading-relaxed">Perfect! I've checked your calendar and Tuesday at 2 PM is available. I'll send you a confirmation shortly.</p>
+                  <div className="bg-white/5 p-5 rounded-2xl rounded-tl-none border border-white/5">
+                    <p className="text-white font-semibold text-sm mb-1">Elara AI</p>
+                    <p className="text-[var(--text-secondary)] text-base leading-relaxed">
+                      Perfect! Tuesday at 2 PM works. I've added it to your calendar.
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+          
         </div>
       </div>
     </section>

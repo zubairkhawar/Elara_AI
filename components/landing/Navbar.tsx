@@ -28,7 +28,7 @@ export default function Navbar() {
             </Link>
             <Link
               href="/dashboard"
-              className="px-4 py-2 rounded-lg gradient-primary text-white font-semibold hover:opacity-90 transition-opacity"
+              className="px-6 py-3 rounded-lg gradient-primary text-white font-semibold hover:opacity-90 transition-opacity"
             >
               Dashboard
             </Link>
@@ -58,7 +58,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/dashboard"
-                className="px-4 py-2 rounded-lg gradient-primary text-white font-semibold text-center"
+                className="px-6 py-3 rounded-lg gradient-primary text-white font-semibold text-center"
               >
                 Dashboard
               </Link>
