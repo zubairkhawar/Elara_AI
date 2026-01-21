@@ -9,7 +9,14 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--scaffold-color)]/80 backdrop-blur-md border-b border-[var(--border)]">
-      <div className="container mx-auto px-6">
+      <div 
+        className="mx-auto px-6"
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '0 24px'
+        }}
+      >
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-white to-purple-300 bg-clip-text text-transparent">
             Elara AI
@@ -28,7 +35,10 @@ export default function Navbar() {
             </Link>
             <Link
               href="/dashboard"
-              className="px-6 py-3 rounded-lg gradient-primary text-white font-semibold hover:opacity-90 transition-opacity"
+              className="px-6 py-3 rounded-lg text-white font-semibold hover:opacity-90 transition-opacity"
+              style={{
+                background: 'linear-gradient(135deg, #1E1E5F 0%, #7B4FFF 100%)'
+              }}
             >
               Dashboard
             </Link>
@@ -58,7 +68,10 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/dashboard"
-                className="px-6 py-3 rounded-lg gradient-primary text-white font-semibold text-center"
+                className="px-6 py-3 rounded-lg text-white font-semibold text-center"
+                style={{
+                  background: 'linear-gradient(135deg, #1E1E5F 0%, #7B4FFF 100%)'
+                }}
               >
                 Dashboard
               </Link>
