@@ -68,88 +68,59 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-4">Dashboard</h1>
-        <p className="text-lg text-[var(--text-secondary)]">
-          Welcome back! Here's what's happening with your bookings today.
-        </p>
-      </div>
-
+    <div className="space-y-4 sm:space-y-5 md:space-y-6 lg:space-y-8">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {stats.map((stat) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
+        {/* Stat Cards */}
+        {stats.slice(0, 2).map((stat) => {
           const Icon = stat.icon;
+          const isPositive = stat.change.startsWith('+');
           return (
             <div
               key={stat.title}
-              className="p-8 rounded-xl bg-[var(--card-color)] border border-[var(--border)] hover:border-[var(--border-hover)] transition-colors text-center"
+              className="rounded-xl bg-white p-4 sm:p-5 md:p-6 shadow-sm"
             >
-              <div className="flex items-center justify-center mb-6">
-                <div className={`p-4 rounded-lg bg-[var(--hover-background)] ${stat.color}`}>
-                  <Icon className="w-8 h-8" />
-                </div>
+              <p className="text-sm text-gray-500 mb-2">{stat.title}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
+                <span className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                  {stat.change}
+                </span>
               </div>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <h3 className="text-3xl font-bold">{stat.value}</h3>
-                <span className="text-sm text-green-400 font-medium">{stat.change}</span>
-              </div>
-              <p className="text-sm text-[var(--text-secondary)]">{stat.title}</p>
             </div>
           );
         })}
+        
+        {/* Monthly Target Card */}
+        <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 shadow-sm">
+          <h3 className="font-semibold mb-2 text-gray-900">Monthly Target</h3>
+          <div className="flex items-center justify-center h-40 text-3xl font-bold bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] bg-clip-text text-transparent">
+            75.55%
+          </div>
+          <p className="text-center text-sm text-gray-500">You earn $3287 today</p>
+        </div>
       </div>
 
-      {/* Recent Bookings */}
-      <div className="grid lg:grid-cols-2 gap-8">
-        <div className="p-8 rounded-xl bg-[var(--card-color)] border border-[var(--border)]">
-          <h2 className="text-2xl font-semibold mb-8 text-center">Recent Bookings</h2>
-          <div className="space-y-6">
-            {recentBookings.map((booking) => (
-              <div
-                key={booking.id}
-                className="p-6 rounded-lg bg-[var(--scaffold-color)] border border-[var(--border)] hover:border-[var(--border-hover)] transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-[var(--text-primary)] text-lg">{booking.customer}</h3>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      booking.status === 'Confirmed'
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-yellow-500/20 text-yellow-400'
-                    }`}
-                  >
-                    {booking.status}
-                  </span>
-                </div>
-                <p className="text-sm text-[var(--text-secondary)] mb-2">{booking.service}</p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {booking.date} at {booking.time}
-                </p>
-              </div>
-            ))}
+      {/* Monthly Sales Chart */}
+      <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 lg:p-8 shadow-sm mb-4 sm:mb-5 md:mb-6">
+        <h3 className="font-semibold mb-3 sm:mb-4 md:mb-5 text-sm sm:text-base md:text-lg text-gray-900">Monthly Sales</h3>
+        <div className="h-40 sm:h-44 md:h-48 lg:h-56 xl:h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+          <p className="text-gray-400 text-xs sm:text-sm md:text-base">Chart placeholder</p>
+        </div>
+      </div>
+
+      {/* Statistics Chart */}
+      <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 lg:p-8 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-3 sm:mb-4 md:mb-5">
+          <h3 className="font-semibold text-sm sm:text-base md:text-lg text-gray-900">Statistics</h3>
+          <div className="flex gap-2 text-xs sm:text-sm">
+            <span className="rounded-lg bg-gray-100 px-2 sm:px-3 py-1 text-gray-700 font-medium">Monthly</span>
+            <span className="px-2 sm:px-3 py-1 text-gray-500">Quarterly</span>
+            <span className="px-2 sm:px-3 py-1 text-gray-500">Annually</span>
           </div>
         </div>
-
-        {/* Activity Feed */}
-        <div className="p-8 rounded-xl bg-[var(--card-color)] border border-[var(--border)]">
-          <h2 className="text-2xl font-semibold mb-8 text-center">Recent Activity</h2>
-          <div className="space-y-6">
-            {[
-              { action: 'New booking received', time: '5 minutes ago', type: 'booking' },
-              { action: 'Call completed successfully', time: '1 hour ago', type: 'call' },
-              { action: 'Customer inquiry handled', time: '2 hours ago', type: 'inquiry' },
-              { action: 'Appointment confirmed', time: '3 hours ago', type: 'confirmation' },
-            ].map((activity, index) => (
-              <div key={index} className="flex items-start gap-4">
-                <div className="w-3 h-3 rounded-full bg-[var(--purple)] mt-2 flex-shrink-0"></div>
-                <div className="flex-1">
-                  <p className="text-base text-[var(--text-primary)] mb-1">{activity.action}</p>
-                  <p className="text-sm text-[var(--text-muted)]">{activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="h-48 sm:h-52 md:h-56 lg:h-64 xl:h-72 bg-gray-100 rounded-lg flex items-center justify-center">
+          <p className="text-gray-400 text-xs sm:text-sm md:text-base">Chart placeholder</p>
         </div>
       </div>
     </div>

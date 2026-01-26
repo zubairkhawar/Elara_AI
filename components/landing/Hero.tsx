@@ -49,7 +49,7 @@ export default function Hero() {
             AI-powered voice booking platform that manages your appointments, 
             schedules meetings, and handles customer inquiries 24/7
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mt-4">
+          <div className="flex justify-center items-center mt-8 md:mt-12">
             <Link
               href="/dashboard"
               className="py-5 md:py-6 rounded-full text-white text-lg md:text-xl font-semibold flex items-center gap-3 hover:scale-[1.03] hover:opacity-90 transition-transform transition-opacity shadow-xl shadow-purple-500/40"
@@ -63,16 +63,6 @@ export default function Hero() {
               Get Started
               <ArrowRight className="w-5 h-5" />
             </Link>
-            <button 
-              className="py-5 md:py-6 rounded-full border border-[var(--border)] text-[var(--text-primary)] text-lg md:text-xl font-semibold hover:bg-[var(--hover-background)] hover:scale-[1.03] transition-transform transition-colors"
-              style={{
-                letterSpacing: '-0.05em',
-                paddingLeft: '32px',
-                paddingRight: '32px'
-              }}
-            >
-              Watch Demo
-            </button>
           </div>
         </div>
       </div>
