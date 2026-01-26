@@ -29,7 +29,7 @@ export default function Navbar() {
             </Link>
             <Link
               href="/dashboard"
-              className="py-4 rounded-lg text-white font-semibold hover:opacity-90 transition-opacity"
+              className="py-2 rounded-lg text-white font-semibold hover:opacity-90 transition-opacity"
               style={{
                 background: 'linear-gradient(135deg, #1E1E5F 0%, #7B4FFF 100%)',
                 letterSpacing: '-0.05em',
@@ -59,7 +59,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/dashboard"
-                className="py-4 rounded-lg text-white font-semibold text-center"
+                className="py-2 rounded-lg text-white font-semibold text-center"
                 style={{
                   background: 'linear-gradient(135deg, #1E1E5F 0%, #7B4FFF 100%)',
                   letterSpacing: '-0.05em',
