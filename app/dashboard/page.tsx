@@ -69,6 +69,16 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5 md:space-y-6 lg:space-y-8">
+      {/* Header */}
+      <div className="mb-4 sm:mb-5 md:mb-6">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">
+          Dashboard
+        </h1>
+        <p className="text-sm sm:text-base md:text-lg text-gray-600">
+          Welcome back! Here's what's happening with your business today.
+        </p>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
         {/* Stat Cards */}
@@ -78,7 +88,7 @@ export default function DashboardPage() {
           return (
             <div
               key={stat.title}
-              className="rounded-xl bg-white p-4 sm:p-5 md:p-6 shadow-sm"
+              className="rounded-xl bg-white p-4 sm:p-5 md:p-6 shadow-sm my-2 sm:my-3 md:my-4"
             >
               <p className="text-sm text-gray-500 mb-2">{stat.title}</p>
               <div className="mt-2 flex items-center justify-between">
@@ -92,7 +102,7 @@ export default function DashboardPage() {
         })}
         
         {/* Monthly Target Card */}
-        <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 shadow-sm">
+        <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 shadow-sm my-2 sm:my-3 md:my-4">
           <h3 className="font-semibold mb-2 text-gray-900">Monthly Target</h3>
           <div className="flex items-center justify-center h-40 text-3xl font-bold bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] bg-clip-text text-transparent">
             75.55%
@@ -102,7 +112,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Monthly Sales Chart */}
-      <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 lg:p-8 shadow-sm mb-4 sm:mb-5 md:mb-6">
+      <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 lg:p-8 shadow-sm my-2 sm:my-3 md:my-4">
         <h3 className="font-semibold mb-3 sm:mb-4 md:mb-5 text-sm sm:text-base md:text-lg text-gray-900">Monthly Sales</h3>
         <div className="h-40 sm:h-44 md:h-48 lg:h-56 xl:h-64 bg-gray-100 rounded-lg flex items-center justify-center">
           <p className="text-gray-400 text-xs sm:text-sm md:text-base">Chart placeholder</p>
@@ -110,7 +120,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Statistics Chart */}
-      <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 lg:p-8 shadow-sm">
+      <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 lg:p-8 shadow-sm my-2 sm:my-3 md:my-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-3 sm:mb-4 md:mb-5">
           <h3 className="font-semibold text-sm sm:text-base md:text-lg text-gray-900">Statistics</h3>
           <div className="flex gap-2 text-xs sm:text-sm">

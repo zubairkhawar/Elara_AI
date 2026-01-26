@@ -84,7 +84,7 @@ export default function Sidebar() {
           <div className="pb-4 w-full flex flex-col">
             {/* MENU Section */}
             {!isCollapsed && (
-              <div className="p-1 pt-6 pb-2">
+              <div className="pl-4 pr-1 pt-6 pb-2">
                 <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">MENU</p>
               </div>
             )}
@@ -127,7 +127,7 @@ export default function Sidebar() {
 
             {/* SUPPORT Section */}
             {!isCollapsed && (
-              <div className="p-1 pt-6 pb-2">
+              <div className="pl-4 pr-1 pt-6 pb-2">
                 <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">SUPPORT</p>
               </div>
             )}
