@@ -1,6 +1,12 @@
-import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
+import { AlertCircle, CheckCircle, Info, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function AlertsPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const alerts = [
     {
       id: 1,
@@ -260,6 +266,16 @@ export default function AlertsPage() {
     },
   ];
 
+  // Pagination calculations
+  const totalPages = Math.ceil(alerts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentAlerts = alerts.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'success':
@@ -311,7 +327,7 @@ export default function AlertsPage() {
 
       {/* Alerts List */}
       <div className="space-y-3 sm:space-y-4">
-        {alerts.map((alert) => {
+        {currentAlerts.map((alert) => {
           const Icon = getIcon(alert.type);
           return (
             <div
@@ -362,6 +378,63 @@ export default function AlertsPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* Pagination */}
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm px-4 sm:px-6 md:px-8 py-4 my-2 sm:my-3 md:my-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+              <span className="font-medium">{Math.min(endIndex, alerts.length)}</span> of{' '}
+              <span className="font-medium">{alerts.length}</span> alerts
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === page
+                          ? 'bg-purple-600 text-white'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                } else if (page === currentPage - 2 || page === currentPage + 2) {
+                  return <span key={page} className="px-2 text-gray-500">...</span>;
+                }
+                return null;
+              })}
+            </div>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Next page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
