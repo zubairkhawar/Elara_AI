@@ -3,19 +3,19 @@ import { Sparkles, Clock, Zap } from 'lucide-react';
 export default function About() {
   const features = [
     {
-      icon: Sparkles,
-      title: 'Intelligent Voice AI',
-      desc: 'Elara uses advanced natural language processing to understand context and provide responses that feel natural and human-like.'
+      icon: Zap,
+      title: 'Answers Every Call',
+      desc: 'No more missed leads, voicemails, or after-hours calls slipping through the cracks.'
     },
     {
       icon: Clock,
-      title: '24/7 Availability',
-      desc: 'Never miss a booking. Elara works around the clock to capture leads and manage your calendar even when you are offline.'
+      title: 'Books Appointments Automatically',
+      desc: 'Works with your existing booking flow so every qualified caller leaves with a confirmed time.'
     },
     {
-      icon: Zap,
-      title: 'Seamless Integration',
-      desc: 'Connect Elara with your existing calendar, CRM, and booking systems. Sync appointments automatically in perfect harmony.'
+      icon: Sparkles,
+      title: 'Sounds Human & Professional',
+      desc: 'Custom voice tone that matches your brand so callers feel like they are talking to your best receptionist.'
     }
   ];
 
@@ -48,10 +48,10 @@ export default function About() {
               marginTop: '48px'
             }}
           >
-            About Elara AI
+            What Elara Does
           </h2>
           <p className="text-xl md:text-2xl text-[var(--text-secondary)] max-w-3xl mx-auto leading-relaxed opacity-80">
-            Revolutionizing how businesses handle customer communications
+            A virtual front desk that answers, qualifies, and books every caller for you.
           </p>
         </div>
         
