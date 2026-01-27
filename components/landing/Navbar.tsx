@@ -22,11 +22,17 @@ export default function Navbar() {
             Elara AI
           </Link>
           
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="#how-it-works" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-              How It Works
-            </Link>
+        {/* Desktop Menu */}
+        <div className="hidden md:flex items-center gap-8">
+          <Link href="#about" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            What Elara Does
+          </Link>
+          <Link href="#how-it-works" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            How It Works
+          </Link>
+          <Link href="#businesses" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            Businesses
+          </Link>
             <Link
               href="/dashboard"
               className="py-2 rounded-lg text-white font-semibold hover:opacity-90 transition-opacity"
@@ -53,13 +59,28 @@ export default function Navbar() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-[var(--border)]">
-            <div className="flex flex-col gap-4">
-              <Link href="#how-it-works" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            <div className="flex flex-col gap-4 items-center text-center">
+              <Link
+                href="#about"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors w-full"
+              >
+                What Elara Does
+              </Link>
+              <Link
+                href="#how-it-works"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors w-full"
+              >
                 How It Works
               </Link>
               <Link
+                href="#businesses"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors w-full"
+              >
+                Businesses
+              </Link>
+              <Link
                 href="/dashboard"
-                className="py-2 rounded-lg text-white font-semibold text-center"
+                className="py-2 rounded-lg text-white font-semibold text-center w-full"
                 style={{
                   background: 'linear-gradient(135deg, #1E1E5F 0%, #7B4FFF 100%)',
                   letterSpacing: '-0.05em',

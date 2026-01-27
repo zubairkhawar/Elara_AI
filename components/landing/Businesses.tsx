@@ -1,4 +1,4 @@
-import { Stethoscope, Wrench, Scissors, Building2, Sparkles } from 'lucide-react';
+import { Stethoscope, Wrench, Scissors, Building2, Sparkles, Briefcase } from 'lucide-react';
 
 const categories = [
   {
@@ -25,6 +25,11 @@ const categories = [
     icon: Sparkles,
     title: 'Local Services',
     desc: 'From cleaners to tutors — if you book by phone, Elara can help.'
+  },
+  {
+    icon: Briefcase,
+    title: 'Agencies & Offices',
+    desc: 'Reception-style call handling for busy front desks and distributed teams.'
   }
 ];
 
