@@ -694,7 +694,7 @@ export default function CustomersPage() {
       {/* Customer Details Modal */}
       {selectedCustomer && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 sm:p-6"
           onClick={() => setSelectedCustomer(null)}
         >
           {/* Backdrop with blur */}
@@ -702,140 +702,146 @@ export default function CustomersPage() {
           
           {/* Modal Content */}
           <div
-            className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-50 to-white">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="hidden sm:flex w-16 h-16 rounded-full bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] items-center justify-center shadow-md flex-shrink-0">
-                  <span className="text-white font-semibold text-xl">{selectedCustomer.avatar}</span>
+            {/* Header - Mobile Optimized */}
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
+              <div className="flex items-start justify-between gap-3 mb-3 sm:mb-0">
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                  <div className="hidden sm:flex w-16 h-16 rounded-full bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] items-center justify-center shadow-md flex-shrink-0">
+                    <span className="text-white font-semibold text-xl">{selectedCustomer.avatar}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {isEditing ? (
+                      <div className="space-y-2 sm:space-y-3">
+                        <input
+                          type="text"
+                          value={editedName}
+                          onChange={(e) => setEditedName(e.target.value)}
+                          className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base sm:text-lg font-semibold"
+                          placeholder="Customer Name"
+                        />
+                        <input
+                          type="text"
+                          value={editedPhone}
+                          onChange={(e) => setEditedPhone(e.target.value)}
+                          className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                          placeholder="Phone Number"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{selectedCustomer.name}</h2>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          <span className="text-sm text-gray-600 break-all">{selectedCustomer.phone}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                   {isEditing ? (
-                    <div className="space-y-3 pr-4">
-                      <input
-                        type="text"
-                        value={editedName}
-                        onChange={(e) => setEditedName(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold"
-                        placeholder="Customer Name"
-                      />
-                      <input
-                        type="text"
-                        value={editedPhone}
-                        onChange={(e) => setEditedPhone(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        placeholder="Phone Number"
-                      />
-                    </div>
+                    <>
+                      <button
+                        onClick={handleSaveEdit}
+                        className="px-3 sm:px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm font-medium"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditedName(selectedCustomer.name);
+                          setEditedPhone(selectedCustomer.phone);
+                        }}
+                        className="px-3 sm:px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors text-sm font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </>
                   ) : (
                     <>
-                      <h2 className="text-2xl font-bold text-gray-900">{selectedCustomer.name}</h2>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Phone className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">{selectedCustomer.phone}</span>
-                      </div>
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        aria-label="Edit customer"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+                        aria-label="Delete customer"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+                      </button>
                     </>
                   )}
+                  <button
+                    onClick={() => {
+                      setSelectedCustomer(null);
+                      setIsEditing(false);
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                  </button>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleSaveEdit}
-                      className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm font-medium"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsEditing(false);
-                        setEditedName(selectedCustomer.name);
-                        setEditedPhone(selectedCustomer.phone);
-                      }}
-                      className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors text-sm font-medium"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                      aria-label="Edit customer"
-                      title="Edit"
-                    >
-                      <Edit2 className="w-5 h-5 text-gray-500" />
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="p-2 rounded-lg hover:bg-red-50 transition-colors"
-                      aria-label="Delete customer"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-5 h-5 text-red-500" />
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => {
-                    setSelectedCustomer(null);
-                    setIsEditing(false);
-                  }}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  aria-label="Close modal"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
               </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
               {/* Customer Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                <div className="p-4 rounded-xl bg-purple-50 border border-purple-100">
-                  <p className="text-sm text-purple-600 font-medium mb-1">Total Bookings</p>
-                  <p className="text-3xl font-bold text-purple-900">{selectedCustomer.bookings}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="p-3 sm:p-4 rounded-xl bg-purple-50 border border-purple-100">
+                  <p className="text-xs sm:text-sm text-purple-600 font-medium mb-1">Total Bookings</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-purple-900">{selectedCustomer.bookings}</p>
                 </div>
-                <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                  <p className="text-sm text-blue-600 font-medium mb-1">Last Booking</p>
-                  <p className="text-lg font-semibold text-blue-900">{selectedCustomer.lastBooking}</p>
+                <div className="p-3 sm:p-4 rounded-xl bg-blue-50 border border-blue-100">
+                  <p className="text-xs sm:text-sm text-blue-600 font-medium mb-1">Last Booking</p>
+                  <p className="text-base sm:text-lg font-semibold text-blue-900">{selectedCustomer.lastBooking}</p>
                 </div>
               </div>
 
               {/* Bookings List */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                   Booking History ({selectedCustomer.bookings} bookings)
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {selectedCustomer.bookingDetails.map((booking) => (
                     <div
                       key={booking.id}
-                      className="p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-sm transition-all bg-white"
+                      className="p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-sm transition-all bg-white"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium text-gray-900">{booking.date}</span>
-                            <span className="text-gray-400">•</span>
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <span className="text-gray-600">{booking.time}</span>
+                      <div className="flex flex-col gap-2 sm:gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 flex-wrap">
+                            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+                            <span className="font-medium text-gray-900 text-sm sm:text-base">
+                              {booking.date}
+                            </span>
+                            <span className="text-gray-400 hidden sm:inline">•</span>
+                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-600 text-sm sm:text-base">
+                              {booking.time}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 ml-7">
-                            <span className="font-medium">{booking.service}</span>
-                            <span className="text-gray-400">•</span>
-                            <span>{booking.duration}</span>
-                          </div>
+                          <span className="self-start sm:self-auto px-2 sm:px-3 py-1 rounded-full bg-green-100 text-green-700 text-[10px] sm:text-xs font-medium flex-shrink-0">
+                            {booking.status}
+                          </span>
                         </div>
-                        <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">
-                          {booking.status}
-                        </span>
+                        <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 ml-5 sm:ml-7">
+                          <span className="font-medium">{booking.service}</span>
+                          <span className="text-gray-400">•</span>
+                          <span>{booking.duration}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
