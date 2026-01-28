@@ -15,6 +15,7 @@ class ServiceSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "category",
             "price",
             "currency",
             "is_active",

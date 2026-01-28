@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Plus, Trash2, Edit2, Check, X, DollarSign, Loader2 } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Plus, Trash2, Edit2, Check, X, DollarSign, Loader2, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Service = {
   id: number;
   name: string;
+  category?: string;
   price: string;
   currency: string;
   is_active: boolean;
@@ -24,10 +25,15 @@ export default function ServicesPage() {
 
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
+   const [newCategory, setNewCategory] = useState('');
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editPrice, setEditPrice] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+
+  const [selectedServices, setSelectedServices] = useState<number[]>([]);
+  const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const [error, setError] = useState('');
 
@@ -65,6 +71,7 @@ export default function ServicesPage() {
         data.map((s: any) => ({
           id: s.id,
           name: s.name,
+          category: s.category || '',
           price: String(s.price),
           currency: s.currency,
           is_active: s.is_active,
@@ -76,6 +83,89 @@ export default function ServicesPage() {
       setLoading(false);
     }
   };
+
+  const toggleSelectService = (id: number) => {
+    setSelectedServices((prev) =>
+      prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id],
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedServices.length === filteredServices.length) {
+      setSelectedServices([]);
+    } else {
+      setSelectedServices(filteredServices.map((s) => s.id));
+    }
+  };
+
+  const handleBulkUpdateActive = async (isActive: boolean) => {
+    if (!accessToken || selectedServices.length === 0) return;
+    setSavingId(0); // indicate bulk
+    setError('');
+    try {
+      await Promise.all(
+        selectedServices.map((id) =>
+          fetch(`${API_BASE_URL}/api/v1/bookings/services/${id}/`, {
+            method: 'PATCH',
+            headers: getHeaders(),
+            body: JSON.stringify({ is_active: isActive }),
+          }),
+        ),
+      );
+      setSelectedServices([]);
+      await fetchServices();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update services');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!accessToken || selectedServices.length === 0) return;
+    if (!window.confirm(`Delete ${selectedServices.length} service(s)? This cannot be undone.`)) {
+      return;
+    }
+    setSavingId(0); // indicate bulk
+    setError('');
+    try {
+      await Promise.all(
+        selectedServices.map((id) =>
+          fetch(`${API_BASE_URL}/api/v1/bookings/services/${id}/`, {
+            method: 'DELETE',
+            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+          }),
+        ),
+      );
+      setSelectedServices([]);
+      await fetchServices();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to delete services');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    services.forEach((s) => {
+      if (s.category && s.category.trim()) {
+        set.add(s.category.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [services]);
+
+  const filteredServices = useMemo(
+    () =>
+      services.filter((service) =>
+        filterCategory === 'all'
+          ? true
+          : (service.category || '').trim().toLowerCase() ===
+            filterCategory.trim().toLowerCase(),
+      ),
+    [services, filterCategory],
+  );
 
   useEffect(() => {
     fetchServices();
@@ -95,6 +185,7 @@ export default function ServicesPage() {
         headers: getHeaders(),
         body: JSON.stringify({
           name: newName.trim(),
+          category: newCategory.trim() || undefined,
           price: newPrice.trim(),
           currency: 'USD',
           is_active: true,
@@ -105,6 +196,7 @@ export default function ServicesPage() {
       }
       setNewName('');
       setNewPrice('');
+      setNewCategory('');
       await fetchServices();
     } catch (err: any) {
       setError(err?.message || 'Failed to add service');
@@ -117,6 +209,7 @@ export default function ServicesPage() {
     setEditingId(service.id);
     setEditName(service.name);
     setEditPrice(service.price);
+    setEditCategory(service.category || '');
   };
 
   const cancelEdit = () => {
@@ -140,6 +233,7 @@ export default function ServicesPage() {
           body: JSON.stringify({
             name: editName.trim(),
             price: editPrice.trim(),
+            category: editCategory.trim() || undefined,
           }),
         },
       );
@@ -188,9 +282,7 @@ export default function ServicesPage() {
           Services
         </h1>
         <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl">
-          Define the services your Vapi agent can offer callers, including
-          pricing. Currency configuration will be handled later in account
-          settings.
+          Define the services your AI agent can offer callers, including pricing and categories.
         </p>
       </div>
 
@@ -222,7 +314,7 @@ export default function ServicesPage() {
               className="w-full px-3 sm:px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
             />
           </div>
-          <div className="w-full md:w-48">
+          <div className="w-full md:w-40">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
               Price
             </label>
@@ -240,6 +332,18 @@ export default function ServicesPage() {
                 className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
               />
             </div>
+          </div>
+          <div className="w-full md:w-56">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+              Category
+            </label>
+            <input
+              type="text"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              placeholder="e.g. Hair, Skin, Consultation"
+              className="w-full px-3 sm:px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+            />
           </div>
           <div className="md:self-end">
             <button
@@ -272,10 +376,61 @@ export default function ServicesPage() {
 
       {/* List */}
       <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-5 md:px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div className="px-4 sm:px-5 md:px-6 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm font-medium text-gray-800">
-            Active services ({services.length})
+            Services ({filteredServices.length}
+            {filterCategory !== 'all' ? ` in "${filterCategory}"` : ''})
           </p>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-xs sm:text-sm text-gray-600">
+                Category:
+              </label>
+              <select
+                value={filterCategory}
+                onChange={(e) => {
+                  setFilterCategory(e.target.value);
+                  setSelectedServices([]);
+                }}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+              >
+                <option value="all">All</option>
+                {categoryOptions.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedServices.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleBulkUpdateActive(true)}
+                  disabled={savingId === 0}
+                  className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 disabled:opacity-50"
+                >
+                  Activate ({selectedServices.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBulkUpdateActive(false)}
+                  disabled={savingId === 0}
+                  className="px-3 py-1.5 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 text-xs font-medium hover:bg-yellow-100 disabled:opacity-50"
+                >
+                  Deactivate
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={savingId === 0}
+                  className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-medium hover:bg-red-100 disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -283,14 +438,14 @@ export default function ServicesPage() {
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
             Loading services…
           </div>
-        ) : services.length === 0 ? (
+        ) : filteredServices.length === 0 ? (
           <div className="px-4 sm:px-5 md:px-6 py-6 text-center text-sm text-gray-500">
             No services yet. Add your first service above to let the agent offer
             it on calls.
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {services.map((service) => {
+            {filteredServices.map((service) => {
               const isEditing = editingId === service.id;
               const isSaving = savingId === service.id;
               return (
@@ -298,9 +453,15 @@ export default function ServicesPage() {
                   key={service.id}
                   className="px-4 sm:px-5 md:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
-                  <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedServices.includes(service.id)}
+                      onChange={() => toggleSelectService(service.id)}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
                     {isEditing ? (
-                      <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+                      <div className="flex flex-col md:flex-row gap-3 md:gap-4 flex-1">
                         <div className="flex-1">
                           <input
                             type="text"
@@ -324,15 +485,37 @@ export default function ServicesPage() {
                             />
                           </div>
                         </div>
+                        <div className="w-full md:w-56">
+                          <input
+                            type="text"
+                            value={editCategory}
+                            onChange={(e) => setEditCategory(e.target.value)}
+                            placeholder="Category"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                          />
+                        </div>
                       </div>
                     ) : (
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm sm:text-base">
-                          {service.name}
-                        </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
+                            {service.name}
+                          </p>
+                          {service.category && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[10px] sm:text-xs font-medium flex-shrink-0">
+                              <Tag className="w-3 h-3" />
+                              {service.category}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-1 mt-0.5">
                           <DollarSign className="w-3 h-3" />
                           {service.price} {service.currency}
+                          {!service.is_active && (
+                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-medium">
+                              Inactive
+                            </span>
+                          )}
                         </p>
                       </div>
                     )}

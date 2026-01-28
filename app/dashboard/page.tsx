@@ -123,8 +123,10 @@ export default function DashboardPage() {
     fetchUserData();
   }, []);
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats (with auto-refresh)
   useEffect(() => {
+    let interval: number | undefined;
+
     const fetchStats = async () => {
       const token =
         typeof window !== 'undefined'
@@ -152,10 +154,21 @@ export default function DashboardPage() {
     };
 
     fetchStats();
+    if (typeof window !== 'undefined') {
+      interval = window.setInterval(fetchStats, 60000);
+    }
+
+    return () => {
+      if (interval !== undefined && typeof window !== 'undefined') {
+        window.clearInterval(interval);
+      }
+    };
   }, []);
 
-  // Fetch revenue data when range changes
+  // Fetch revenue data when range changes (with auto-refresh)
   useEffect(() => {
+    let interval: number | undefined;
+
     const fetchRevenue = async () => {
       const token =
         typeof window !== 'undefined'
@@ -179,6 +192,15 @@ export default function DashboardPage() {
     };
 
     fetchRevenue();
+    if (typeof window !== 'undefined') {
+      interval = window.setInterval(fetchRevenue, 60000);
+    }
+
+    return () => {
+      if (interval !== undefined && typeof window !== 'undefined') {
+        window.clearInterval(interval);
+      }
+    };
   }, [salesRange]);
 
   // Fetch bookings heatmap when week changes

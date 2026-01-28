@@ -29,8 +29,10 @@ export default function AlertsPage() {
   const [markingAllRead, setMarkingAllRead] = useState(false);
   const itemsPerPage = 10;
 
-  const fetchAlerts = async () => {
-    setLoading(true);
+  const fetchAlerts = async (showLoader = true) => {
+    if (showLoader) {
+      setLoading(true);
+    }
     setError('');
     try {
       let url = `${API_BASE_URL}/api/v1/alerts/`;
@@ -50,12 +52,29 @@ export default function AlertsPage() {
     } catch (err: any) {
       setError(err?.message || 'Failed to load alerts');
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchAlerts();
+    let interval: number | undefined;
+
+    const load = async () => {
+      await fetchAlerts();
+    };
+
+    load();
+    if (typeof window !== 'undefined') {
+      interval = window.setInterval(() => fetchAlerts(false), 60000);
+    }
+
+    return () => {
+      if (interval !== undefined && typeof window !== 'undefined') {
+        window.clearInterval(interval);
+      }
+    };
   }, [filter]);
 
   const handleMarkAsRead = async (alertId: number) => {
