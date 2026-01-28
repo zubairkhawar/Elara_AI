@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Phone, Calendar, Search, Filter, Plus, ChevronLeft, ChevronRight, X, Clock, Trash2, Edit2 } from 'lucide-react';
+import { User, Phone, Calendar, Search, Plus, ChevronLeft, ChevronRight, X, Clock, Trash2, Edit2 } from 'lucide-react';
 
 interface BookingDetail {
   id: number;
@@ -25,6 +25,7 @@ interface Customer {
 
 export default function CustomersPage() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -462,17 +463,28 @@ export default function CustomersPage() {
     },
   ]);
 
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filteredCustomers = customers.filter((customer) => {
+    if (!normalizedSearch) return true;
+    return (
+      customer.name.toLowerCase().includes(normalizedSearch) ||
+      customer.phone.toLowerCase().includes(normalizedSearch)
+    );
+  });
+
   // Pagination calculations
-  const totalPages = Math.ceil(customers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentCustomers = customers.slice(startIndex, endIndex);
+  const currentCustomers = filteredCustomers.slice(startIndex, endIndex);
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
-  const totalBookings = customers.reduce((sum, c) => sum + c.bookings, 0);
+  const totalBookings = filteredCustomers.reduce((sum, c) => sum + c.bookings, 0);
 
   const handleSaveEdit = () => {
     if (selectedCustomer) {
@@ -564,14 +576,15 @@ export default function CustomersPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search customers..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Search by name or phone..."
               className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 rounded-lg bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-sm sm:text-base"
             />
           </div>
-          <button className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium">
-            <Filter className="w-4 h-4" />
-            <span>Filter</span>
-          </button>
           <button
             onClick={() => {
               setShowAddModal(true);
@@ -639,8 +652,8 @@ export default function CustomersPage() {
             <div className="flex items-center gap-2">
               <p className="text-sm text-gray-700">
                 Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                <span className="font-medium">{Math.min(endIndex, customers.length)}</span> of{' '}
-                <span className="font-medium">{customers.length}</span> customers
+                <span className="font-medium">{Math.min(endIndex, filteredCustomers.length)}</span> of{' '}
+                <span className="font-medium">{filteredCustomers.length}</span> customers
               </p>
             </div>
             <div className="flex items-center gap-2">

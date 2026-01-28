@@ -4,9 +4,7 @@ import {
   Bell,
   Users,
   User,
-  MessageCircle,
   Headphones,
-  Mail,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -20,12 +18,12 @@ export const mainNavItems: NavItem[] = [
   { name: 'Bookings', href: '/dashboard/bookings', icon: Calendar },
   { name: 'Alerts', href: '/dashboard/alerts', icon: Bell },
   { name: 'Customers', href: '/dashboard/customers', icon: Users },
+  { name: 'Call Summaries', href: '/dashboard/call-summaries', icon: Bell },
+  { name: 'Services', href: '/dashboard/services', icon: LayoutDashboard },
   { name: 'Profile', href: '/dashboard/profile', icon: User },
 ];
 
 export const supportNavItems: NavItem[] = [
-  { name: 'Chat', href: '/dashboard/chat', icon: MessageCircle },
   { name: 'Support', href: '/dashboard/support', icon: Headphones },
-  { name: 'Email', href: '/dashboard/email', icon: Mail },
 ];
 

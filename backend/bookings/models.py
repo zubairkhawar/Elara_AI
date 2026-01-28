@@ -6,6 +6,33 @@ from django.db import models
 from clients.models import Client
 
 
+class Service(models.Model):
+    """
+    A service that the business offers, e.g. "Haircut" or "Cleansing".
+    These are used both in the dashboard UI and by the Vapi agent
+    when presenting options and prices to callers.
+    """
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="services",
+    )
+    name = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=8, default="USD")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = ("owner", "name")
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.price} {self.currency})"
+
+
 class Booking(models.Model):
     """
     Basic booking model to support the dashboard.

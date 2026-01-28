@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, Clock, User, Search, Filter, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, User, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function BookingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
   const itemsPerPage = 10;
 
   const bookings = [
@@ -362,11 +363,26 @@ export default function BookingsPage() {
     },
   ];
 
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filteredBookings = bookings.filter((booking) => {
+    if (!normalizedSearch) return true;
+    return (
+      booking.customer.toLowerCase().includes(normalizedSearch) ||
+      booking.email.toLowerCase().includes(normalizedSearch) ||
+      booking.service.toLowerCase().includes(normalizedSearch) ||
+      booking.phone.toLowerCase().includes(normalizedSearch) ||
+      booking.date.toLowerCase().includes(normalizedSearch) ||
+      booking.time.toLowerCase().includes(normalizedSearch)
+    );
+  });
+
   // Pagination calculations
-  const totalPages = Math.ceil(bookings.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredBookings.length / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentBookings = bookings.slice(startIndex, endIndex);
+  const currentBookings = filteredBookings.slice(startIndex, endIndex);
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
@@ -390,14 +406,15 @@ export default function BookingsPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search bookings..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search by customer, email, phone, service, or date..."
             className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 rounded-lg bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-sm sm:text-base"
           />
         </div>
-        <button className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium">
-          <Filter className="w-4 h-4" />
-          <span>Filter</span>
-        </button>
         <button className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] text-white font-semibold hover:opacity-90 transition-opacity text-sm sm:text-base">
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">New Booking</span>
@@ -531,9 +548,9 @@ export default function BookingsPage() {
         <div className="px-4 sm:px-6 md:px-8 py-4 border-t border-gray-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-              <span className="font-medium">{Math.min(endIndex, bookings.length)}</span> of{' '}
-              <span className="font-medium">{bookings.length}</span> results
+              Showing <span className="font-medium">{filteredBookings.length === 0 ? 0 : startIndex + 1}</span> to{' '}
+              <span className="font-medium">{Math.min(endIndex, filteredBookings.length)}</span> of{' '}
+              <span className="font-medium">{filteredBookings.length}</span> results
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -587,9 +604,9 @@ export default function BookingsPage() {
       {/* Pagination - Mobile (cards view) */}
       <div className="md:hidden mt-3 flex flex-col gap-3">
         <p className="text-xs text-gray-600 text-center">
-          Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-          <span className="font-medium">{Math.min(endIndex, bookings.length)}</span> of{' '}
-          <span className="font-medium">{bookings.length}</span> results
+          Showing <span className="font-medium">{filteredBookings.length === 0 ? 0 : startIndex + 1}</span> to{' '}
+          <span className="font-medium">{Math.min(endIndex, filteredBookings.length)}</span> of{' '}
+          <span className="font-medium">{filteredBookings.length}</span> results
         </p>
         <div className="flex items-center justify-center gap-2">
           <button
