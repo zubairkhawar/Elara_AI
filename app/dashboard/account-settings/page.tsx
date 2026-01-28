@@ -2,8 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Check, Loader2, Save, DollarSign } from 'lucide-react';
+import { 
+  Check, 
+  Loader2, 
+  Save, 
+  DollarSign, 
+  Globe, 
+  Bell, 
+  Lock, 
+  Download, 
+  Trash2,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 import { authenticatedFetch } from '@/utils/api';
+import { useRouter } from 'next/navigation';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -16,13 +29,60 @@ const CURRENCIES = [
   { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨' },
 ];
 
+const LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'fr', name: 'French' },
+  { code: 'de', name: 'German' },
+  { code: 'ar', name: 'Arabic' },
+  { code: 'ur', name: 'Urdu' },
+];
+
+// Common timezones
+const TIMEZONES = [
+  { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
+  { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
+  { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
+  { value: 'Europe/London', label: 'London (GMT)' },
+  { value: 'Europe/Paris', label: 'Paris (CET)' },
+  { value: 'Europe/Berlin', label: 'Berlin (CET)' },
+  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+  { value: 'Asia/Riyadh', label: 'Riyadh (AST)' },
+  { value: 'Asia/Karachi', label: 'Karachi (PKT)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+  { value: 'Asia/Shanghai', label: 'Shanghai (CST)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEDT)' },
+];
+
 export default function AccountSettingsPage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
+  const router = useRouter();
+  
+  // Settings state
   const [currency, setCurrency] = useState('USD');
+  const [timezone, setTimezone] = useState('UTC');
+  const [language, setLanguage] = useState('en');
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(false);
+  
+  // Password change state
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // UI state
   const [isSaving, setIsSaving] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -41,8 +101,11 @@ export default function AccountSettingsPage() {
         if (res.ok) {
           const data = await res.json();
           setCurrency(data.currency || 'USD');
+          setTimezone(data.timezone || 'UTC');
+          setLanguage(data.language || 'en');
+          setEmailNotifications(data.email_notifications !== false);
+          setSmsNotifications(data.sms_notifications === true);
         } else if (res.status === 401) {
-          // Token refresh failed, user will be redirected to login
           setLoading(false);
           return;
         }
@@ -70,12 +133,17 @@ export default function AccountSettingsPage() {
     try {
       const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/accounts/me/`, {
         method: 'PATCH',
-        body: JSON.stringify({ currency }),
+        body: JSON.stringify({
+          currency,
+          timezone,
+          language,
+          email_notifications: emailNotifications,
+          sms_notifications: smsNotifications,
+        }),
       });
 
       if (!res.ok) {
         if (res.status === 401) {
-          // Token refresh failed, user will be redirected to login
           return;
         }
         const errorData = await res.json().catch(() => ({}));
@@ -84,28 +152,91 @@ export default function AccountSettingsPage() {
 
       const updatedData = await res.json();
       setCurrency(updatedData.currency);
+      setTimezone(updatedData.timezone);
+      setLanguage(updatedData.language);
+      setEmailNotifications(updatedData.email_notifications);
+      setSmsNotifications(updatedData.sms_notifications);
       
       // Update user data in AuthContext and localStorage
       if (updateProfile) {
-        await updateProfile({ currency: updatedData.currency });
-      }
-      
-      // Update localStorage user data
-      const storedUser = localStorage.getItem('elara_user');
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        userData.currency = updatedData.currency;
-        localStorage.setItem('elara_user', JSON.stringify(userData));
+        await updateProfile({
+          currency: updatedData.currency,
+          timezone: updatedData.timezone,
+          language: updatedData.language,
+          email_notifications: updatedData.email_notifications,
+          sms_notifications: updatedData.sms_notifications,
+        } as any);
       }
       
       setSuccessMessage('Settings saved successfully!');
-      
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: any) {
       setErrorMessage(err?.message || 'Failed to save settings');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      setErrorMessage('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    setErrorMessage('');
+
+    try {
+      const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/accounts/me/password/`, {
+        method: 'POST',
+        body: JSON.stringify({
+          old_password: oldPassword,
+          new_password: newPassword,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.old_password?.[0] || errorData.detail || 'Failed to change password');
+      }
+
+      setSuccessMessage('Password changed successfully!');
+      setShowPasswordChange(false);
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/accounts/me/`);
+      if (res.ok) {
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `elara-account-data-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setSuccessMessage('Account data exported successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (err) {
+      setErrorMessage('Failed to export data');
     }
   };
 
@@ -142,93 +273,394 @@ export default function AccountSettingsPage() {
         </div>
       )}
 
-      {/* Settings Form */}
+      {/* Currency Preference */}
       <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8">
-        {/* Currency Selection */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-purple-50">
+            <DollarSign className="w-5 h-5 text-purple-600" />
+          </div>
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Currency Preference
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Select your preferred currency for displaying prices and revenue.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {CURRENCIES.map((curr) => (
+            <button
+              key={curr.code}
+              type="button"
+              onClick={() => setCurrency(curr.code)}
+              className={`relative p-4 rounded-xl border-2 transition-all text-left ${
+                currency === curr.code
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-200 hover:border-gray-300 bg-white'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg font-semibold text-gray-900">
+                      {curr.symbol}
+                    </span>
+                    <span className="text-base font-medium text-gray-900">
+                      {curr.code}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500">{curr.name}</p>
+                </div>
+                {currency === curr.code && (
+                  <div className="flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Timezone & Language */}
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-blue-50">
+            <Globe className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Regional Settings
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Configure your timezone and language preferences.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Timezone
+            </label>
+            <select
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm sm:text-base"
+            >
+              {TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Language
+            </label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm sm:text-base"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-orange-50">
+            <Bell className="w-5 h-5 text-orange-600" />
+          </div>
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Notification Preferences
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Choose how you want to receive notifications about bookings and updates.
+            </p>
+          </div>
+        </div>
+
         <div className="space-y-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-purple-50">
-              <DollarSign className="w-5 h-5 text-purple-600" />
+          <label className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
+            <div>
+              <p className="font-medium text-gray-900">Email Notifications</p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Receive booking confirmations and updates via email
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEmailNotifications(!emailNotifications)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                emailNotifications ? 'bg-purple-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  emailNotifications ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+
+          <label className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
+            <div>
+              <p className="font-medium text-gray-900">SMS Notifications</p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Receive booking reminders via text message
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSmsNotifications(!smsNotifications)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                smsNotifications ? 'bg-purple-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  smsNotifications ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+        </div>
+      </div>
+
+      {/* Password Change */}
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-red-50">
+              <Lock className="w-5 h-5 text-red-600" />
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                Currency Preference
+                Security
               </h2>
               <p className="text-sm text-gray-500 mt-0.5">
-                Select your preferred currency for displaying prices and revenue.
+                Change your account password
               </p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowPasswordChange(!showPasswordChange);
+              setErrorMessage('');
+            }}
+            className="px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700"
+          >
+            {showPasswordChange ? 'Cancel' : 'Change Password'}
+          </button>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {CURRENCIES.map((curr) => (
-              <button
-                key={curr.code}
-                type="button"
-                onClick={() => setCurrency(curr.code)}
-                className={`relative p-4 rounded-xl border-2 transition-all text-left ${
-                  currency === curr.code
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg font-semibold text-gray-900">
-                        {curr.symbol}
-                      </span>
-                      <span className="text-base font-medium text-gray-900">
-                        {curr.code}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500">{curr.name}</p>
-                  </div>
-                  {currency === curr.code && (
-                    <div className="flex-shrink-0">
-                      <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </button>
-            ))}
+        {showPasswordChange && (
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Current Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showOldPassword ? 'text' : 'password'}
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 pr-10 rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm sm:text-base"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowOldPassword(!showOldPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showOldPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 pr-10 rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm sm:text-base"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">Must be at least 8 characters</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 pr-10 rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm sm:text-base"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePasswordChange}
+              disabled={isChangingPassword || !oldPassword || !newPassword || !confirmPassword}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+            >
+              {isChangingPassword ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                  Changing Password...
+                </>
+              ) : (
+                'Change Password'
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Data Management */}
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-gray-50">
+            <Download className="w-5 h-5 text-gray-600" />
+          </div>
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Data Management
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Export your account data or delete your account
+            </p>
           </div>
         </div>
 
-        {/* Save Button */}
-        <div className="mt-6 sm:mt-8 pt-6 border-t border-gray-200 flex justify-end">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2.5 sm:py-3 rounded-lg bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Save Settings</span>
-              </>
-            )}
-          </button>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200">
+            <div>
+              <p className="font-medium text-gray-900">Export Account Data</p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Download a copy of your account data in JSON format
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleExportData}
+              className="px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+            >
+              <Download className="w-4 h-4 inline mr-2" />
+              Export
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-red-50/30">
+            <div>
+              <p className="font-medium text-red-900">Delete Account</p>
+              <p className="text-sm text-red-700 mt-0.5">
+                Permanently delete your account and all associated data
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-4 h-4 inline mr-2" />
+              Delete
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Additional Settings Section (for future expansion) */}
-      <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
-          Additional Settings
-        </h2>
-        <p className="text-sm text-gray-500">
-          More settings and preferences will be available here in the future.
-        </p>
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex items-center gap-2 px-6 py-2.5 sm:py-3 rounded-lg bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Saving...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              <span>Save Settings</span>
+            </>
+          )}
+        </button>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Account</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data, bookings, and customers.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // TODO: Implement account deletion endpoint
+                  setErrorMessage('Account deletion is not yet implemented. Please contact support.');
+                  setShowDeleteConfirm(false);
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

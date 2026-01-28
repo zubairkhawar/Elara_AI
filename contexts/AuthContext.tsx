@@ -13,6 +13,10 @@ interface User {
   service_hours?: string;
   custom_service_hours?: string;
   currency?: string;
+  timezone?: string;
+  language?: string;
+  email_notifications?: boolean;
+  sms_notifications?: boolean;
 }
 
 interface AuthContextType {
@@ -44,6 +48,10 @@ interface ProfileUpdateData {
   service_hours?: string;
   custom_service_hours?: string;
   currency?: string;
+  timezone?: string;
+  language?: string;
+  email_notifications?: boolean;
+  sms_notifications?: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

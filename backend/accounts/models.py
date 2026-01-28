@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
-from django.utils import timezone
+from django.utils import timezone as django_timezone
 
 
 class UserManager(BaseUserManager["User"]):
@@ -63,11 +63,22 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('SAR', 'SAR - Saudi Riyal'),
         ('PKR', 'PKR - Pakistani Rupee'),
     ])
+    timezone = models.CharField(max_length=50, default='UTC', help_text='Timezone for displaying dates and times')
+    language = models.CharField(max_length=10, default='en', choices=[
+        ('en', 'English'),
+        ('es', 'Spanish'),
+        ('fr', 'French'),
+        ('de', 'German'),
+        ('ar', 'Arabic'),
+        ('ur', 'Urdu'),
+    ])
+    email_notifications = models.BooleanField(default=True, help_text='Receive email notifications for bookings and updates')
+    sms_notifications = models.BooleanField(default=False, help_text='Receive SMS notifications for bookings')
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
-    date_joined = models.DateTimeField(default=timezone.now)
+    date_joined = models.DateTimeField(default=django_timezone.now)
 
     objects = UserManager()
 
