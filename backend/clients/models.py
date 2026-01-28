@@ -8,7 +8,7 @@ class Client(models.Model):
     """
     Represents an end-customer of a business using Elara.
 
-    This is intentionally minimal for now and can be extended later.
+    Extended with basic CRM fields like notes and tags.
     """
 
     owner = models.ForeignKey(
@@ -19,6 +19,12 @@ class Client(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField(blank=True)
     phone_number = models.CharField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
+    tags = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Comma-separated tags for quick segmentation (e.g. VIP, Hair, Laser).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

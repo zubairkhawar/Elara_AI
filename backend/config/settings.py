@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "bookings",
     "integrations",
     "notifications",
+    "support",
 ]
 
 MIDDLEWARE = [

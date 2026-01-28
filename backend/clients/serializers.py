@@ -11,17 +11,19 @@ class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = [
-            'id',
-            'name',
-            'email',
-            'phone_number',
-            'created_at',
-            'bookings_count',
+            "id",
+            "name",
+            "email",
+            "phone_number",
+            "notes",
+            "tags",
+            "created_at",
+            "bookings_count",
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ["id", "created_at"]
 
     def create(self, validated_data):
-        request = self.context.get('request')
+        request = self.context.get("request")
         assert request is not None
-        validated_data['owner'] = request.user
+        validated_data["owner"] = request.user
         return super().create(validated_data)
