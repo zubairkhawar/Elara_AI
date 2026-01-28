@@ -5,39 +5,90 @@ import { Calendar, Phone, Users, TrendingUp } from 'lucide-react';
 
 type TimeRange = 'day' | 'month';
 
+const getTodayISO = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getWeekStartISO = (isoDate: string) => {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const date = new Date(year, (month ?? 1) - 1, day ?? 1);
+  const jsDay = date.getDay(); // 0 (Sun) - 6 (Sat)
+  const diffToMonday = (jsDay + 6) % 7; // 0 if Monday
+  const weekStart = new Date(date);
+  weekStart.setDate(date.getDate() - diffToMonday);
+  const y = weekStart.getFullYear();
+  const m = String(weekStart.getMonth() + 1).padStart(2, '0');
+  const d = String(weekStart.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const formatWeekLabel = (weekStartISO: string, todayISO: string) => {
+  const [y, m, d] = weekStartISO.split('-').map(Number);
+  const start = new Date(y, (m ?? 1) - 1, d ?? 1);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const sameMonth = start.getMonth() === end.getMonth();
+  const options: Intl.DateTimeFormatOptions = { day: '2-digit' };
+  const startDay = start.toLocaleDateString(undefined, options);
+
+  const endOptions: Intl.DateTimeFormatOptions = sameMonth
+    ? { day: '2-digit', month: 'short' }
+    : { day: '2-digit', month: 'short' };
+
+  const endLabel = end.toLocaleDateString(undefined, endOptions);
+
+  const todayWeekStart = getWeekStartISO(todayISO);
+  if (todayWeekStart === weekStartISO) {
+    return `This week • ${startDay}–${endLabel}`;
+  }
+
+  return `${startDay}–${endLabel}`;
+};
+
 export default function DashboardPage() {
   const [bookingsRange, setBookingsRange] = useState<TimeRange>('day');
   const [salesRange, setSalesRange] = useState<'day' | 'week' | 'month'>('day');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(() =>
+    getWeekStartISO(getTodayISO()),
+  );
   const [showDayPicker, setShowDayPicker] = useState(false);
   const stats = [
     {
-      title: 'Total Bookings',
+      title: 'Total bookings',
       value: '1,247',
       change: '+12%',
+      suffix: '',
       icon: Calendar,
-      color: 'text-blue-400',
+      color: 'text-emerald-500',
     },
     {
-      title: 'Calls Handled',
+      title: 'Calls handled',
       value: '3,891',
       change: '+8%',
+      suffix: '',
       icon: Phone,
-      color: 'text-purple-400',
+      color: 'text-sky-500',
     },
     {
-      title: 'Active Customers',
+      title: 'Active customers',
       value: '892',
       change: '+5%',
+      suffix: '',
       icon: Users,
-      color: 'text-green-400',
+      color: 'text-indigo-500',
     },
     {
-      title: 'Conversion Rate',
-      value: '68%',
-      change: '+3%',
+      title: 'Monthly sales',
+      value: '$300',
+      change: '+18%',
+      suffix: 'this month',
       icon: TrendingUp,
-      color: 'text-yellow-400',
+      color: 'text-purple-500',
     },
   ];
 
@@ -95,25 +146,38 @@ export default function DashboardPage() {
     [],
   );
 
-  // Bookings: time slots for a specific day (populated after date selection)
-  const dayTimeSlots = useMemo(
+  // Time slots for 24h with 30 min intervals (00:00 → 23:30)
+  const timeSlots = useMemo(
     () =>
-      !selectedDate
-        ? []
-        : [
-            { label: '09:00', value: 3 },
-            { label: '10:00', value: 5 },
-            { label: '11:00', value: 4 },
-            { label: '12:00', value: 6 },
-            { label: '13:00', value: 2 },
-            { label: '14:00', value: 4 },
-            { label: '15:00', value: 5 },
-            { label: '16:00', value: 3 },
-          ],
-    [selectedDate],
+      Array.from({ length: 48 }).map((_, idx) => {
+        const hours = Math.floor(idx / 2);
+        const minutes = idx % 2 === 0 ? '00' : '30';
+        const label = `${hours.toString().padStart(2, '0')}:${minutes}`;
+        return label;
+      }),
+    [],
   );
 
-  const bookingsData = bookingsRange === 'day' ? dayTimeSlots : [];
+  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+  // Mock bookings grid: for each day of week and time slot, decide if there's a booking
+  const bookingsGrid = useMemo(
+    () =>
+      weekDays.map((day, dayIdx) =>
+        timeSlots.map((slotLabel, slotIdx) => ({
+          day,
+          label: slotLabel,
+          hasBooking: ((dayIdx + slotIdx * 3) % 17 === 0) || ((dayIdx * 5 + slotIdx) % 23 === 0),
+        })),
+      ),
+    [timeSlots],
+  );
+
+  const todayISO = getTodayISO();
+  const bookingsFilterLabel =
+    selectedDate && selectedDate !== null
+      ? formatWeekLabel(selectedDate, todayISO)
+      : 'This week';
 
   return (
     <div className="space-y-4 sm:space-y-5 md:space-y-6 lg:space-y-8">
@@ -128,35 +192,53 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
-        {/* Stat Cards */}
-        {stats.slice(0, 2).map((stat) => {
-          const Icon = stat.icon;
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
+        {stats.map((stat) => {
           const isPositive = stat.change.startsWith('+');
           return (
             <div
               key={stat.title}
-              className="rounded-xl bg-white p-4 sm:p-5 md:p-6 shadow-sm my-2 sm:my-3 md:my-4"
+              className="rounded-2xl bg-white p-4 sm:p-5 md:p-6 shadow-sm my-1.5 sm:my-2 md:my-3 flex flex-col justify-between"
             >
-              <p className="text-sm text-gray-500 mb-2">{stat.title}</p>
-              <div className="mt-2 flex items-center justify-between">
-                <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
-                <span className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-500">
+                    {stat.title}
+                  </p>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">
+                      {stat.value}
+                    </p>
+                    {stat.suffix ? (
+                      <span className="text-[10px] sm:text-xs text-gray-500">
+                        {stat.suffix}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <div
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 ${stat.color}`}
+                >
+                  <stat.icon className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-xs font-medium ${
+                    isPositive
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-red-50 text-red-700'
+                  }`}
+                >
                   {stat.change}
+                </span>
+                <span className="text-[10px] sm:text-xs text-gray-400">
+                  vs. last month
                 </span>
               </div>
             </div>
           );
         })}
-        
-        {/* Monthly Target Card */}
-        <div className="rounded-xl bg-white p-4 sm:p-5 md:p-6 shadow-sm my-2 sm:my-3 md:my-4">
-          <h3 className="font-semibold mb-2 text-gray-900">Monthly Target</h3>
-          <div className="flex items-center justify-center h-40 text-3xl font-bold bg-gradient-to-br from-[#1E1E5F] to-[#7B4FFF] bg-clip-text text-transparent">
-            75.55%
-          </div>
-          <p className="text-center text-sm text-gray-500">You earn $3287 today</p>
-        </div>
       </div>
 
       {/* Bookings chart – heatmap style */}
@@ -167,7 +249,7 @@ export default function DashboardPage() {
               Bookings activity
             </h3>
             <p className="text-xs sm:text-sm text-gray-500">
-              See when your bookings are happening across the day or month.
+              See when your bookings are happening across the day.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -178,41 +260,23 @@ export default function DashboardPage() {
                   setBookingsRange('day');
                   setShowDayPicker((prev) => !prev);
                 }}
-                className={`px-2 sm:px-3 py-1 rounded-full transition ${
-                  bookingsRange === 'day'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500'
-                }`}
+                className="px-2 sm:px-3 py-1 rounded-full transition bg-white text-gray-900 shadow-sm"
               >
-                Day
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setBookingsRange('month');
-                  setShowDayPicker(false);
-                }}
-                className={`px-2 sm:px-3 py-1 rounded-full transition ${
-                  bookingsRange === 'month'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500'
-                }`}
-              >
-                Month
+                {bookingsFilterLabel}
               </button>
 
               {showDayPicker && (
                 <div className="absolute right-0 top-10 z-20 w-60 rounded-xl border border-gray-200 bg-white p-3 shadow-lg">
                   <p className="mb-2 text-xs font-medium text-gray-700">
-                    Choose a date
+                    Choose a week
                   </p>
                   <input
                     type="date"
                     className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs sm:text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    value={selectedDate ?? ''}
+                    value={selectedDate ?? getTodayISO()}
                     onChange={(e) => {
-                      setSelectedDate(e.target.value || null);
-                      setBookingsRange('day');
+                      const value = e.target.value || getTodayISO();
+                      setSelectedDate(getWeekStartISO(value));
                       setShowDayPicker(false);
                     }}
                   />
@@ -239,101 +303,78 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              {/* Day view: 24h timeline with 30min intervals */}
+              {/* 24h timeline with 30min intervals, days as rows */}
               {bookingsRange === 'day' ? (
                 <div className="flex h-full w-full flex-col">
-                  <div className="flex-1 overflow-x-auto">
-                    <div className="flex h-full items-center gap-1 sm:gap-1.5 md:gap-2">
-                      {bookingsData.map((slot) => {
-                        const intensity =
-                          slot.value === 0
-                            ? 'bg-gray-100'
-                            : slot.value <= 2
-                            ? 'bg-emerald-100'
-                            : slot.value <= 4
-                            ? 'bg-emerald-300'
-                            : slot.value <= 6
-                            ? 'bg-emerald-400'
-                            : 'bg-emerald-600';
-                        return (
+                  <div className="flex flex-1 overflow-visible pl-[1px]">
+                    {/* Y axis labels: days of week */}
+                    <div className="mr-2 w-8 sm:w-10 md:w-12 flex flex-col justify-between py-1 text-[9px] sm:text-[10px] text-gray-500">
+                      {weekDays.map((day) => (
+                        <span key={day} className="h-4 sm:h-5 md:h-6 flex items-center">
+                          {day}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Heatmap grid: rows = days, columns = 30min slots */}
+                    <div className="flex-1">
+                      <div className="flex h-full flex-col justify-between py-1">
+                        {bookingsGrid.map((row, dayIdx) => (
                           <div
-                            key={slot.label}
-                            className="group relative flex h-6 w-6 items-center justify-center sm:h-7 sm:w-7 md:h-8 md:w-8"
+                            key={weekDays[dayIdx]}
+                            className="grid gap-[2px]"
+                            style={{ gridTemplateColumns: 'repeat(48, minmax(0, 1fr))' }}
                           >
-                            <div
-                              className={`h-full w-full rounded-sm sm:rounded-md ${intensity}`}
-                            />
-                            <div className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[10px] text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100">
-                              <span className="font-semibold">{slot.label}</span>{' '}
-                              · {slot.value} bookings
-                            </div>
+                            {row.map((cell, slotIdx) => (
+                              // eslint-disable-next-line react/no-array-index-key
+                              <div
+                                key={slotIdx}
+                                className="group relative flex items-center justify-center"
+                              >
+                                <div className="relative w-full">
+                                  {/* Square aspect ratio */}
+                                  <div className="pb-[100%]" />
+                                  <div
+                                    className={`absolute inset-0 rounded-[2px] ${
+                                      cell.hasBooking ? 'bg-emerald-400' : 'bg-gray-100'
+                                    }`}
+                                  />
+                                  <div className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[10px] text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                                    <span className="font-semibold">
+                                      {cell.day} {cell.label}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-3 flex justify-between text-[9px] sm:text-[10px] text-gray-500">
-                    <span>00:00</span>
-                    <span>06:00</span>
-                    <span>12:00</span>
-                    <span>18:00</span>
-                    <span>24:00</span>
-                  </div>
-                </div>
-              ) : (
-                // Month view: simple calendar-style heatmap
-                <div className="flex h-full w-full flex-col justify-between">
-                  <div className="flex items-center justify-between text-[10px] sm:text-xs text-gray-500 mb-2">
-                    <span>Mon</span>
-                    <span>Wed</span>
-                    <span>Fri</span>
-                    <span>Sun</span>
-                  </div>
-                  <div className="flex-1 overflow-x-auto">
-                    <div className="grid auto-cols-min grid-flow-col gap-1 sm:gap-1.5">
-                      {Array.from({ length: 30 }).map((_, idx) => {
-                        const value = (idx * 3 + 5) % 10;
-                        const intensity =
-                          value === 0
-                            ? 'bg-gray-100'
-                            : value <= 3
-                            ? 'bg-emerald-100'
-                            : value <= 6
-                            ? 'bg-emerald-300'
-                            : 'bg-emerald-500';
-                        return (
-                          <div
-                            // eslint-disable-next-line react/no-array-index-key
-                            key={idx}
-                            className="group flex flex-col items-center gap-1"
-                          >
-                            <div className="grid grid-rows-4 gap-0.5">
-                              {Array.from({ length: 4 }).map((__, rowIdx) => (
-                                <div
-                                  // eslint-disable-next-line react/no-array-index-key
-                                  key={rowIdx}
-                                  className={`h-3 w-3 rounded-[3px] ${intensity}`}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-[9px] text-gray-400">
-                              {idx + 1}
-                            </span>
-                          </div>
-                        );
-                      })}
+                  <div className="mt-3 flex">
+                    {/* spacer to align with weekday labels column */}
+                    <div className="w-8 sm:w-10 md:w-12" />
+                    <div
+                      className="flex-1 grid gap-0 text-[7px] sm:text-[8px] text-gray-400"
+                      style={{ gridTemplateColumns: 'repeat(48, minmax(0, 1fr))' }}
+                    >
+                      {timeSlots.map((slot) => (
+                        <span
+                          key={slot}
+                          className="flex items-start justify-center"
+                          style={{
+                            writingMode: 'vertical-rl',
+                            textOrientation: 'mixed',
+                          }}
+                        >
+                          {slot}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center justify-end gap-1 text-[9px] sm:text-[10px] text-gray-500">
-                    <span>Less</span>
-                    <span className="h-3 w-3 rounded-sm bg-gray-100" />
-                    <span className="h-3 w-3 rounded-sm bg-emerald-100" />
-                    <span className="h-3 w-3 rounded-sm bg-emerald-300" />
-                    <span className="h-3 w-3 rounded-sm bg-emerald-500" />
-                    <span>More</span>
-                  </div>
                 </div>
-              )}
+              ) : null}
             </>
           )}
         </div>
