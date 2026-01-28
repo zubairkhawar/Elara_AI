@@ -36,11 +36,15 @@ export default function ServicesPage() {
       ? localStorage.getItem('elara_access_token')
       : null;
 
-  const authHeaders = accessToken
-    ? {
-        Authorization: `Bearer ${accessToken}`,
-      }
-    : {};
+  const getHeaders = (): HeadersInit => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return headers;
+  };
 
   const fetchServices = async () => {
     if (!accessToken) {
@@ -51,10 +55,7 @@ export default function ServicesPage() {
     setError('');
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/bookings/services/`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
+        headers: getHeaders(),
       });
       if (!res.ok) {
         throw new Error('Failed to load services');
@@ -91,10 +92,7 @@ export default function ServicesPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/bookings/services/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           name: newName.trim(),
           price: newPrice.trim(),
@@ -138,10 +136,7 @@ export default function ServicesPage() {
         `${API_BASE_URL}/api/v1/bookings/services/${id}/`,
         {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders,
-          },
+          headers: getHeaders(),
           body: JSON.stringify({
             name: editName.trim(),
             price: editPrice.trim(),
@@ -169,9 +164,9 @@ export default function ServicesPage() {
         `${API_BASE_URL}/api/v1/bookings/services/${id}/`,
         {
           method: 'DELETE',
-          headers: {
-            ...authHeaders,
-          },
+          headers: accessToken
+            ? { Authorization: `Bearer ${accessToken}` }
+            : {},
         },
       );
       if (!res.ok && res.status !== 204) {
