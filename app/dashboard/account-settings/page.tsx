@@ -186,16 +186,56 @@ export default function AccountSettingsPage() {
 
   const handleExportData = async (format: 'json' | 'pdf') => {
     try {
-      const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/accounts/me/`);
-      if (!res.ok) {
+      // Fetch all data in parallel
+      const [accountRes, bookingsRes, clientsRes, statsRes] = await Promise.all([
+        authenticatedFetch(`${API_BASE_URL}/api/v1/accounts/me/`),
+        authenticatedFetch(`${API_BASE_URL}/api/v1/bookings/`),
+        authenticatedFetch(`${API_BASE_URL}/api/v1/clients/`),
+        authenticatedFetch(`${API_BASE_URL}/api/v1/bookings/stats/`),
+      ]);
+
+      if (!accountRes.ok) {
         throw new Error('Failed to fetch account data');
       }
 
-      const data = await res.json();
+      const accountData = await accountRes.json();
+      const bookingsData = bookingsRes.ok ? await bookingsRes.json() : [];
+      const clientsData = clientsRes.ok ? await clientsRes.json() : [];
+      const statsData = statsRes.ok ? await statsRes.json() : {};
+
+      // Combine all data
+      const exportData = {
+        account: accountData,
+        statistics: {
+          total_bookings: statsData.total_bookings || 0,
+          monthly_sales: statsData.monthly_sales || 0,
+          total_customers: clientsData.length || 0,
+        },
+        bookings: bookingsData.map((b: any) => ({
+          id: b.id,
+          customer_name: b.client_name || 'Unknown',
+          customer_email: b.client_email || '',
+          customer_phone: b.client_phone || '',
+          service: b.service_name || 'N/A',
+          starts_at: b.starts_at,
+          ends_at: b.ends_at,
+          status: b.status,
+          notes: b.notes || '',
+        })),
+        customers: clientsData.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email || '',
+          phone_number: c.phone_number || '',
+          bookings_count: c.bookings_count || 0,
+          created_at: c.created_at,
+        })),
+      };
+
       const dateStr = new Date().toISOString().split('T')[0];
 
       if (format === 'json') {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -210,9 +250,42 @@ export default function AccountSettingsPage() {
         const margin = 20;
         let yPos = margin;
 
+        const addSection = (title: string, fields: Array<[string, string]>) => {
+          if (yPos > doc.internal.pageSize.getHeight() - 30) {
+            doc.addPage();
+            yPos = margin;
+          }
+          doc.setFontSize(14);
+          doc.setTextColor(30, 30, 95);
+          doc.text(title, margin, yPos);
+          yPos += 10;
+
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          fields.forEach(([label, value]) => {
+            if (yPos > doc.internal.pageSize.getHeight() - 20) {
+              doc.addPage();
+              yPos = margin;
+            }
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${label}:`, margin, yPos);
+            doc.setFont('helvetica', 'normal');
+            const textWidth = doc.getTextWidth(value);
+            if (textWidth > pageWidth - margin * 2 - 60) {
+              const lines = doc.splitTextToSize(value, pageWidth - margin * 2 - 60);
+              doc.text(lines, margin + 60, yPos);
+              yPos += lines.length * 5;
+            } else {
+              doc.text(value, margin + 60, yPos);
+              yPos += 7;
+            }
+          });
+          yPos += 5;
+        };
+
         // Title
         doc.setFontSize(20);
-        doc.setTextColor(30, 30, 95); // Deep blue
+        doc.setTextColor(30, 30, 95);
         doc.text('Account Data Export', pageWidth / 2, yPos, { align: 'center' });
         yPos += 15;
 
@@ -220,75 +293,121 @@ export default function AccountSettingsPage() {
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.text(`Exported on: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 15;
+        yPos += 20;
 
         // Account Information
-        doc.setFontSize(14);
-        doc.setTextColor(30, 30, 95);
-        doc.text('Account Information', margin, yPos);
-        yPos += 10;
-
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        const accountFields = [
-          ['Email', data.email || 'N/A'],
-          ['Name', data.name || 'N/A'],
-          ['Business Name', data.business_name || 'N/A'],
-          ['Phone Number', data.phone_number || 'N/A'],
-          ['Business Type', data.business_type || 'N/A'],
-          ['Service Hours', data.service_hours || 'N/A'],
-        ];
-
-        accountFields.forEach(([label, value]) => {
-          if (yPos > doc.internal.pageSize.getHeight() - 20) {
-            doc.addPage();
-            yPos = margin;
-          }
-          doc.setFont('helvetica', 'bold');
-          doc.text(`${label}:`, margin, yPos);
-          doc.setFont('helvetica', 'normal');
-          const textWidth = doc.getTextWidth(value);
-          if (textWidth > pageWidth - margin * 2 - 60) {
-            const lines = doc.splitTextToSize(value, pageWidth - margin * 2 - 60);
-            doc.text(lines, margin + 60, yPos);
-            yPos += lines.length * 5;
-          } else {
-            doc.text(value, margin + 60, yPos);
-            yPos += 7;
-          }
-        });
-
-        yPos += 5;
+        addSection('Account Information', [
+          ['Email', exportData.account.email || 'N/A'],
+          ['Name', exportData.account.name || 'N/A'],
+          ['Business Name', exportData.account.business_name || 'N/A'],
+          ['Phone Number', exportData.account.phone_number || 'N/A'],
+          ['Business Type', exportData.account.business_type || 'N/A'],
+          ['Service Hours', exportData.account.service_hours || 'N/A'],
+        ]);
 
         // Settings
-        doc.setFontSize(14);
-        doc.setTextColor(30, 30, 95);
-        if (yPos > doc.internal.pageSize.getHeight() - 20) {
-          doc.addPage();
-          yPos = margin;
-        }
-        doc.text('Settings', margin, yPos);
-        yPos += 10;
+        addSection('Settings', [
+          ['Currency', exportData.account.currency || 'USD'],
+          ['Email Notifications', exportData.account.email_notifications ? 'Enabled' : 'Disabled'],
+          ['SMS Notifications', exportData.account.sms_notifications ? 'Enabled' : 'Disabled'],
+        ]);
 
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        const settingsFields = [
-          ['Currency', data.currency || 'USD'],
-          ['Email Notifications', data.email_notifications ? 'Enabled' : 'Disabled'],
-          ['SMS Notifications', data.sms_notifications ? 'Enabled' : 'Disabled'],
-        ];
+        // Statistics
+        const currencySymbol = exportData.account.currency === 'GBP' ? '£' : 
+                              exportData.account.currency === 'AED' ? 'د.إ' :
+                              exportData.account.currency === 'SAR' ? '﷼' :
+                              exportData.account.currency === 'PKR' ? '₨' : '$';
+        addSection('Statistics', [
+          ['Total Bookings', exportData.statistics.total_bookings.toString()],
+          ['Monthly Sales', `${currencySymbol}${exportData.statistics.monthly_sales.toLocaleString()}`],
+          ['Total Customers', exportData.statistics.total_customers.toString()],
+        ]);
 
-        settingsFields.forEach(([label, value]) => {
-          if (yPos > doc.internal.pageSize.getHeight() - 20) {
+        // Customers
+        if (exportData.customers.length > 0) {
+          if (yPos > doc.internal.pageSize.getHeight() - 30) {
             doc.addPage();
             yPos = margin;
           }
-          doc.setFont('helvetica', 'bold');
-          doc.text(`${label}:`, margin, yPos);
-          doc.setFont('helvetica', 'normal');
-          doc.text(value, margin + 60, yPos);
-          yPos += 7;
-        });
+          doc.setFontSize(14);
+          doc.setTextColor(30, 30, 95);
+          doc.text('Customers', margin, yPos);
+          yPos += 10;
+
+          exportData.customers.forEach((customer: any, index: number) => {
+            if (yPos > doc.internal.pageSize.getHeight() - 40) {
+              doc.addPage();
+              yPos = margin;
+            }
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 30, 95);
+            doc.text(`Customer ${index + 1}: ${customer.name}`, margin, yPos);
+            yPos += 8;
+
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(0, 0, 0);
+            doc.text(`  Email: ${customer.email || 'N/A'}`, margin + 5, yPos);
+            yPos += 6;
+            doc.text(`  Phone: ${customer.phone_number || 'N/A'}`, margin + 5, yPos);
+            yPos += 6;
+            doc.text(`  Bookings: ${customer.bookings_count}`, margin + 5, yPos);
+            yPos += 8;
+          });
+        }
+
+        // Bookings Summary
+        if (exportData.bookings.length > 0) {
+          if (yPos > doc.internal.pageSize.getHeight() - 30) {
+            doc.addPage();
+            yPos = margin;
+          }
+          doc.setFontSize(14);
+          doc.setTextColor(30, 30, 95);
+          doc.text(`Bookings (${exportData.bookings.length} total)`, margin, yPos);
+          yPos += 10;
+
+          // Show first 20 bookings in detail, then summary
+          const bookingsToShow = exportData.bookings.slice(0, 20);
+          bookingsToShow.forEach((booking: any, index: number) => {
+            if (yPos > doc.internal.pageSize.getHeight() - 50) {
+              doc.addPage();
+              yPos = margin;
+            }
+            const startDate = new Date(booking.starts_at);
+            const endDate = new Date(booking.ends_at);
+            const duration = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Booking ${index + 1}:`, margin, yPos);
+            yPos += 6;
+            doc.setFont('helvetica', 'normal');
+            doc.text(`  Customer: ${booking.customer_name}`, margin + 5, yPos);
+            yPos += 5;
+            doc.text(`  Service: ${booking.service}`, margin + 5, yPos);
+            yPos += 5;
+            doc.text(`  Date: ${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString()}`, margin + 5, yPos);
+            yPos += 5;
+            doc.text(`  Duration: ${duration} minutes`, margin + 5, yPos);
+            yPos += 5;
+            doc.text(`  Status: ${booking.status}`, margin + 5, yPos);
+            yPos += 8;
+          });
+
+          if (exportData.bookings.length > 20) {
+            if (yPos > doc.internal.pageSize.getHeight() - 20) {
+              doc.addPage();
+              yPos = margin;
+            }
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(100, 100, 100);
+            doc.text(`... and ${exportData.bookings.length - 20} more bookings`, margin, yPos);
+            yPos += 10;
+          }
+        }
 
         // Footer
         const totalPages = doc.getNumberOfPages();
