@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
+import { ArrowRight, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 const businessTypes = [
@@ -33,7 +34,9 @@ const serviceHoursOptions = [
 export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { signup, loginWithGoogle, loginWithApple } = useAuth();
+  const toast = useToast();
 
   // Step 1: Account Info
   const [email, setEmail] = useState('');
@@ -51,33 +54,40 @@ export default function SignupPage() {
   const [customServiceHours, setCustomServiceHours] = useState('');
 
   const handleNext = () => {
+    setError('');
     if (step === 1) {
       if (password !== confirmPassword) {
-        alert('Passwords do not match');
+        setError('Passwords do not match.');
+        toast.error('Passwords do not match.');
         return;
       }
       if (password.length < 8) {
-        alert('Password must be at least 8 characters');
+        setError('Password must be at least 8 characters.');
+        toast.error('Password must be at least 8 characters.');
         return;
       }
     }
     if (step === 2) {
       if (!businessName || !phoneNumber || !businessType) {
-        alert('Please fill in all fields');
+        setError('Please fill in all required fields.');
+        toast.error('Please fill in all required fields.');
         return;
       }
       if (businessType === 'Other' && !customBusinessType) {
-        alert('Please specify your business type');
+        setError('Please specify your business type.');
+        toast.error('Please specify your business type.');
         return;
       }
     }
     if (step === 3) {
       if (!serviceHours) {
-        alert('Please select service hours');
+        setError('Please select service hours.');
+        toast.error('Please select service hours.');
         return;
       }
       if (serviceHours === 'Custom Service Hours' && !customServiceHours) {
-        alert('Please specify your custom service hours');
+        setError('Please specify your custom service hours.');
+        toast.error('Please specify your custom service hours.');
         return;
       }
     }
@@ -85,6 +95,7 @@ export default function SignupPage() {
   };
 
   const handleSubmit = async () => {
+    setError('');
     setIsLoading(true);
     try {
       await signup({
@@ -96,30 +107,41 @@ export default function SignupPage() {
         serviceHours: serviceHours === 'Custom Service Hours' ? customServiceHours : serviceHours,
         customServiceHours: serviceHours === 'Custom Service Hours' ? customServiceHours : undefined,
       });
-    } catch (error) {
-      console.error('Signup failed:', error);
+      toast.success('Account created successfully. Welcome!');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Signup failed. Please try again.';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleSignup = async () => {
+    setError('');
     setIsLoading(true);
     try {
       await loginWithGoogle();
-    } catch (error) {
-      console.error('Google signup failed:', error);
+      toast.success('Welcome!');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Google signup failed.';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAppleSignup = async () => {
+    setError('');
     setIsLoading(true);
     try {
       await loginWithApple();
-    } catch (error) {
-      console.error('Apple signup failed:', error);
+      toast.success('Welcome!');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Apple signup failed.';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -192,6 +214,11 @@ export default function SignupPage() {
           {/* Step 1: Create Account */}
           {step === 1 && (
             <div className="space-y-6">
+              {error && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-200" role="alert">
+                  {error}
+                </div>
+              )}
               <div>
                 <h2 className="text-3xl font-bold text-white mb-2">Create your account</h2>
                 <p className="text-[var(--text-secondary)]">Let's start with your basic information</p>
@@ -301,6 +328,11 @@ export default function SignupPage() {
           {/* Step 2: Business Info */}
           {step === 2 && (
             <div className="space-y-6">
+              {error && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-200" role="alert">
+                  {error}
+                </div>
+              )}
               <div>
                 <h2 className="text-3xl font-bold text-white mb-2">Tell us about your business</h2>
                 <p className="text-[var(--text-secondary)]">Help us personalize your experience</p>
@@ -401,6 +433,11 @@ export default function SignupPage() {
           {/* Step 3: Service Hours */}
           {step === 3 && (
             <div className="space-y-6">
+              {error && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-200" role="alert">
+                  {error}
+                </div>
+              )}
               <div>
                 <h2 className="text-3xl font-bold text-white mb-2">Service hours</h2>
                 <p className="text-[var(--text-secondary)]">When do you typically serve customers?</p>
@@ -489,6 +526,11 @@ export default function SignupPage() {
           {/* Step 4: Confirmation */}
           {step === 4 && (
             <div className="space-y-6">
+              {error && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-200" role="alert">
+                  {error}
+                </div>
+              )}
               <div className="text-center">
                 <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-6">
                   <Check className="w-8 h-8 text-purple-400" />
@@ -526,8 +568,17 @@ export default function SignupPage() {
                   letterSpacing: '-0.05em'
                 }}
               >
-                {isLoading ? 'Completing signup...' : 'Complete Signup'}
-                {!isLoading && <ArrowRight className="w-5 h-5" />}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Completing signup...
+                  </>
+                ) : (
+                  <>
+                    Complete Signup
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
             </div>
           )}

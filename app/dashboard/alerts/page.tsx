@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Info, XCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { authenticatedFetch } from '@/utils/api';
+import { useToast } from '@/contexts/ToastContext';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -28,6 +29,7 @@ export default function AlertsPage() {
   const [markingRead, setMarkingRead] = useState<number | null>(null);
   const [markingAllRead, setMarkingAllRead] = useState(false);
   const itemsPerPage = 10;
+  const toast = useToast();
 
   const fetchAlerts = async (showLoader = true) => {
     if (showLoader) {
@@ -86,13 +88,15 @@ export default function AlertsPage() {
       );
 
       if (res.ok) {
-        // Update local state
         setAlerts(alerts.map(alert =>
           alert.id === alertId ? { ...alert, is_read: true } : alert
         ));
+        toast.success('Alert marked as read');
+      } else {
+        toast.error('Failed to mark alert as read');
       }
     } catch (err) {
-      console.error('Failed to mark alert as read:', err);
+      toast.error('Failed to mark alert as read');
     } finally {
       setMarkingRead(null);
     }
@@ -107,11 +111,13 @@ export default function AlertsPage() {
       );
 
       if (res.ok) {
-        // Refresh alerts
         await fetchAlerts();
+        toast.success('All alerts marked as read');
+      } else {
+        toast.error('Failed to mark all as read');
       }
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      toast.error('Failed to mark all as read');
     } finally {
       setMarkingAllRead(false);
     }

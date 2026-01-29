@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Mail, MessageCircle, ArrowUpRight, HelpCircle, Loader2, CheckCircle2 } from 'lucide-react';
 import { authenticatedFetch } from '@/utils/api';
+import { useToast } from '@/contexts/ToastContext';
 
 const SUPPORT_EMAIL = 'zubairkhawer@gmail.com';
 const WHATSAPP_NUMBER_E164 = '923213211177'; // without leading +
@@ -11,6 +12,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 export default function SupportPage() {
+  const toast = useToast();
   const mailtoHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
     'Elara AI Support',
   )}&body=${encodeURIComponent(
@@ -57,10 +59,12 @@ export default function SupportPage() {
       setSuccess('Your message has been sent. We will get back to you soon.');
       setSubject('');
       setMessage('');
-      // keep contactEmail so they don't have to retype it
+      toast.success('Support request sent. We will get back to you soon.');
       setTimeout(() => setSuccess(''), 4000);
     } catch (err: any) {
-      setError(err?.message || 'Failed to submit support request');
+      const msg = err?.message || 'Failed to submit support request';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

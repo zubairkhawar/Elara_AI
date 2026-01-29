@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { User, Phone, Calendar, Search, Plus, ChevronLeft, ChevronRight, X, Clock, Trash2, Edit2, Loader2, Tag } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -30,6 +31,7 @@ interface Customer {
 }
 
 export default function CustomersPage() {
+  const toast = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -201,8 +203,11 @@ export default function CustomersPage() {
       );
       setSelectedCustomer(updatedCustomer);
       setIsEditing(false);
+      toast.success('Customer updated');
     } catch (err: any) {
-      setError(err?.message || 'Failed to update customer');
+      const msg = err?.message || 'Failed to update customer';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId(null);
     }
@@ -227,12 +232,15 @@ export default function CustomersPage() {
       setCustomers(customers.filter((c) => c.id !== selectedCustomer.id));
       setSelectedCustomer(null);
       setShowDeleteConfirm(false);
+      toast.success('Customer deleted');
       const newTotalPages = Math.ceil((customers.length - 1) / itemsPerPage);
       if (currentPage > newTotalPages && newTotalPages > 0) {
         setCurrentPage(newTotalPages);
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to delete customer');
+      const msg = err?.message || 'Failed to delete customer';
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -283,8 +291,11 @@ export default function CustomersPage() {
       setNewCustomerNotes('');
       setNewCustomerTags('');
       setShowAddModal(false);
+      toast.success('Customer added');
     } catch (err: any) {
-      setError(err?.message || 'Failed to create customer');
+      const msg = err?.message || 'Failed to create customer';
+      setError(msg);
+      toast.error(msg);
     }
   };
 

@@ -55,6 +55,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
+function parseSignupError(body: Record<string, unknown>): string {
+  const detail = body.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail.length > 0 && typeof detail[0] === 'string') {
+    return detail[0];
+  }
+  // DRF serializer errors: { email: ["..."], password: ["..."] }
+  const parts: string[] = [];
+  const fieldLabels: Record<string, string> = {
+    email: 'Email',
+    password: 'Password',
+    name: 'Business name',
+    business_name: 'Business name',
+    phone_number: 'Phone number',
+    business_type: 'Business type',
+    service_hours: 'Service hours',
+    custom_service_hours: 'Custom service hours',
+  };
+  for (const [key, value] of Object.entries(body)) {
+    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') {
+      const label = fieldLabels[key] || key;
+      parts.push(`${label}: ${value[0]}`);
+    }
+  }
+  if (parts.length > 0) return parts.join(' ');
+  return 'Signup failed. Please check your information and try again.';
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -75,6 +103,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  function parseLoginError(body: Record<string, unknown>): string {
+    const detail = body.detail;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail) && detail.length > 0 && typeof detail[0] === 'string') {
+      return detail[0];
+    }
+    return 'Invalid email or password. Please check your credentials and try again.';
+  }
+
   const login = async (email: string, password: string) => {
     const tokenRes = await fetch(`${API_BASE_URL}/api/v1/accounts/token/`, {
       method: 'POST',
@@ -85,7 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!tokenRes.ok) {
-      throw new Error('Invalid email or password');
+      const errorBody = await tokenRes.json().catch(() => ({})) as Record<string, unknown>;
+      throw new Error(parseLoginError(errorBody));
     }
 
     const tokens = await tokenRes.json();
@@ -132,10 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!res.ok) {
-      const errorBody = await res.json().catch(() => ({}));
-      // Surface first validation error if available
-      const message =
-        (errorBody && JSON.stringify(errorBody)) || 'Signup failed';
+      const errorBody = await res.json().catch(() => ({})) as Record<string, unknown>;
+      const message = parseSignupError(errorBody);
       throw new Error(message);
     }
 

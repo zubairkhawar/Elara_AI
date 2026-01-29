@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Plus, Trash2, Edit2, Check, X, DollarSign, Loader2, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 type Service = {
   id: number;
@@ -18,6 +19,7 @@ const API_BASE_URL =
 
 export default function ServicesPage() {
   const { user } = useAuth();
+  const toast = useToast();
 
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,8 +116,11 @@ export default function ServicesPage() {
       );
       setSelectedServices([]);
       await fetchServices();
+      toast.success('Services updated');
     } catch (err: any) {
-      setError(err?.message || 'Failed to update services');
+      const msg = err?.message || 'Failed to update services';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId(null);
     }
@@ -139,8 +144,11 @@ export default function ServicesPage() {
       );
       setSelectedServices([]);
       await fetchServices();
+      toast.success(`${selectedServices.length} service(s) deleted`);
     } catch (err: any) {
-      setError(err?.message || 'Failed to delete services');
+      const msg = err?.message || 'Failed to delete services';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId(null);
     }
@@ -198,8 +206,11 @@ export default function ServicesPage() {
       setNewPrice('');
       setNewCategory('');
       await fetchServices();
+      toast.success('Service added');
     } catch (err: any) {
-      setError(err?.message || 'Failed to add service');
+      const msg = err?.message || 'Failed to add service';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId(null);
     }
@@ -242,8 +253,11 @@ export default function ServicesPage() {
       }
       cancelEdit();
       await fetchServices();
+      toast.success('Service updated');
     } catch (err: any) {
-      setError(err?.message || 'Failed to update service');
+      const msg = err?.message || 'Failed to update service';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId(null);
     }
@@ -267,8 +281,11 @@ export default function ServicesPage() {
         throw new Error('Failed to delete service');
       }
       await fetchServices();
+      toast.success('Service deleted');
     } catch (err: any) {
-      setError(err?.message || 'Failed to delete service');
+      const msg = err?.message || 'Failed to delete service';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId(null);
     }

@@ -37,14 +37,19 @@ export default function Footer() {
               Explore
             </h4>
             <ul className="space-y-5">
-              {["Features", "About", "Contact", "Help Center"].map((item) => (
-                <li key={item}>
+              {[
+                { label: "Features", href: "/features" },
+                { label: "About", href: "/about" },
+                { label: "Contact", href: "/contact" },
+                { label: "Help Center", href: "/help" },
+              ].map(({ label, href }) => (
+                <li key={label}>
                   <Link
-                    href="#"
+                    href={href}
                     className="text-gray-400 hover:text-purple-400 text-sm md:text-base transition-all duration-300"
                     style={{ lineHeight: '1.8' }}
                   >
-                    {item}
+                    {label}
                   </Link>
                 </li>
               ))}
@@ -57,19 +62,21 @@ export default function Footer() {
               Support
             </h4>
             <ul className="space-y-5">
-              {["Documentation", "Privacy Policy", "Terms of Service"].map(
-                (item) => (
-                  <li key={item}>
-                    <Link
-                      href="#"
-                      className="text-gray-400 hover:text-purple-400 text-sm md:text-base transition-all duration-300"
-                      style={{ lineHeight: '1.8' }}
-                    >
-                      {item}
-                    </Link>
-                  </li>
-                )
-              )}
+              {[
+                { label: "Documentation", href: "/documentation" },
+                { label: "Privacy Policy", href: "/privacy" },
+                { label: "Terms of Service", href: "/terms" },
+              ].map(({ label, href }) => (
+                <li key={label}>
+                  <Link
+                    href={href}
+                    className="text-gray-400 hover:text-purple-400 text-sm md:text-base transition-all duration-300"
+                    style={{ lineHeight: '1.8' }}
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 

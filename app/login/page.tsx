@@ -2,44 +2,59 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowRight } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { login, loginWithGoogle, loginWithApple } = useAuth();
+  const toast = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
     try {
       await login(email, password);
-    } catch (error) {
-      console.error('Login failed:', error);
+      toast.success('Welcome back!');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sign in failed. Please try again.';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setError('');
     setIsLoading(true);
     try {
       await loginWithGoogle();
-    } catch (error) {
-      console.error('Google login failed:', error);
+      toast.success('Welcome back!');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Google sign in failed.';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAppleLogin = async () => {
+    setError('');
     setIsLoading(true);
     try {
       await loginWithApple();
-    } catch (error) {
-      console.error('Apple login failed:', error);
+      toast.success('Welcome back!');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Apple sign in failed.';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -87,6 +102,12 @@ export default function LoginPage() {
             <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
             <p className="text-[var(--text-secondary)]">Sign in to your account to continue</p>
           </div>
+
+          {error && (
+            <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-200" role="alert">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -138,8 +159,17 @@ export default function LoginPage() {
                 letterSpacing: '-0.05em'
               }}
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
-              {!isLoading && <ArrowRight className="w-5 h-5" />}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </button>
           </form>
 

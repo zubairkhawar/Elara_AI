@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Search, Filter, PhoneCall, Clock, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { authenticatedFetch } from '@/utils/api';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -46,25 +47,15 @@ export default function CallSummariesPage() {
   const pageSize = 10;
 
   const fetchCallSummaries = useCallback(async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('elara_access_token') : null;
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (typeof window === 'undefined') return;
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams();
       if (search.trim()) params.set('search', search.trim());
       if (selectedService !== 'all') params.set('service', selectedService);
-      const res = await fetch(
-        `${API_BASE_URL}/api/v1/call-summaries/?${params.toString()}`,
-        {
-          headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const res = await authenticatedFetch(
+        `${API_BASE_URL}/api/v1/call-summaries/?${params.toString()}`
       );
       if (!res.ok) {
         if (res.status === 401) return;
@@ -112,17 +103,10 @@ export default function CallSummariesPage() {
   // Load services for filter chips
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const token = localStorage.getItem('elara_access_token');
-    if (!token) return;
 
     const loadServices = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/bookings/services/`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/bookings/services/`);
         if (!res.ok) return;
         const data = await res.json();
         const names = (data as { name?: string }[])

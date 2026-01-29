@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Calendar, Clock, User, Search, Plus, ChevronLeft, ChevronRight, Loader2, Edit2, Trash2, X, Check, LayoutGrid, List, MoreVertical } from 'lucide-react';
 import { authenticatedFetch } from '@/utils/api';
+import { useToast } from '@/contexts/ToastContext';
 import { Calendar as BigCalendar, momentLocalizer, View } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -46,6 +47,7 @@ export default function BookingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const toast = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -57,6 +59,7 @@ export default function BookingsPage() {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const itemsPerPage = 10;
 
@@ -235,15 +238,18 @@ export default function BookingsPage() {
 
       await fetchBookings();
       handleCloseModal();
+      toast.success(editingBooking ? 'Booking updated' : 'Booking created');
     } catch (err: any) {
-      setError(err?.message || 'Failed to save booking');
+      const msg = err?.message || 'Failed to save booking';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteBooking = async (id: number) => {
-    setDeletingId(id);
+    setIsDeleting(true);
     try {
       const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/bookings/${id}/`, {
         method: 'DELETE',
@@ -252,10 +258,14 @@ export default function BookingsPage() {
         await fetchBookings();
         setShowDeleteConfirm(false);
         setDeletingId(null);
+        toast.success('Booking deleted');
+      } else {
+        toast.error('Failed to delete booking');
       }
     } catch (err) {
-      console.error('Failed to delete booking:', err);
+      toast.error('Failed to delete booking');
     } finally {
+      setIsDeleting(false);
       setDeletingId(null);
     }
   };
@@ -274,8 +284,9 @@ export default function BookingsPage() {
       await fetchBookings();
       setSelectedBookings([]);
       setShowBulkActions(false);
+      toast.success(`${selectedBookings.length} booking(s) cancelled`);
     } catch (err) {
-      console.error('Failed to cancel bookings:', err);
+      toast.error('Failed to cancel some bookings');
     } finally {
       setSaving(false);
     }
@@ -1035,11 +1046,11 @@ export default function BookingsPage() {
                 Cancel
               </button>
               <button
-                onClick={() => handleDeleteBooking(deletingId)}
-                disabled={deletingId === null}
+                onClick={() => deletingId !== null && handleDeleteBooking(deletingId)}
+                disabled={deletingId === null || isDeleting}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50"
               >
-                {deletingId === deletingId ? (
+                {isDeleting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
                     Deleting...
