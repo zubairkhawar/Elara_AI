@@ -129,8 +129,10 @@ CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=True)
 # CORS allowed origins (if CORS_ALLOW_ALL_ORIGINS is False)
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 
-# Static files with WhiteNoise
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# Static files: use manifest storage only when not DEBUG (e.g. production).
+# When DEBUG is True, admin and runserver work without running collectstatic.
+if not DEBUG:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Vapi webhook: assign new call summaries to this user (by email) when no custom data is sent.
 # If unset, the first active user is used (single-tenant).

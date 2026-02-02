@@ -98,29 +98,20 @@ def _parse_iso_datetime(s: str | None):
         return None
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def vapi_webhook(request):
+def _process_vapi_webhook(request, owner: User) -> JsonResponse:
     """
-    Accept Vapi server webhooks (e.g. end-of-call-report).
-    Creates or updates a CallSummary for the configured owner.
+    Process Vapi end-of-call-report payload and create/update CallSummary for the given owner.
     """
     try:
         body = json.loads(request.body or "{}")
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    # Vapi can send { "message": { "type": "end-of-call-report", ... } } or a flat payload.
     message = body.get("message") or body
     if isinstance(message, dict) and message.get("type") == "end-of-call-report":
         payload = message
     else:
         payload = body
-
-    owner = _get_webhook_owner()
-    if not owner:
-        logger.warning("Vapi webhook: no owner user found, skipping")
-        return JsonResponse({"ok": False, "reason": "no_owner"}, status=200)
 
     call_id = (
         payload.get("call", {}).get("id")
@@ -215,3 +206,35 @@ def vapi_webhook(request):
     )
     _link_call_summary_to_booking_and_client(instance)
     return JsonResponse({"ok": True, "action": "created"})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def vapi_webhook(request):
+    """
+    Legacy single-tenant webhook. Uses VAPI_DEFAULT_OWNER_EMAIL or first user.
+    For new clients use webhook_by_token (URL includes the client's token).
+    """
+    owner = _get_webhook_owner()
+    if not owner:
+        logger.warning("Vapi webhook: no owner user found, skipping")
+        return JsonResponse({"ok": False, "reason": "no_owner"}, status=200)
+    return _process_vapi_webhook(request, owner)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def vapi_webhook_by_token(request, token: str):
+    """
+    Per-client webhook. URL: /api/v1/vapi/webhook/<token>/
+    Resolve the client (User) by vapi_webhook_token and create/update CallSummary for that user.
+    Use this URL when configuring each Vapi agent (one agent per client).
+    """
+    owner = User.objects.filter(
+        vapi_webhook_token=token.strip(),
+        is_active=True,
+    ).first()
+    if not owner:
+        logger.warning("Vapi webhook: unknown or inactive token")
+        return JsonResponse({"ok": False, "reason": "unknown_token"}, status=200)
+    return _process_vapi_webhook(request, owner)

@@ -55,6 +55,46 @@ class User(AbstractBaseUser, PermissionsMixin):
     service_hours = models.CharField(max_length=255, blank=True)
     custom_service_hours = models.CharField(max_length=512, blank=True)
     
+    # Vapi: unique token per client so each agent has its own webhook URL
+    vapi_webhook_token = models.CharField(
+        max_length=64,
+        unique=True,
+        blank=True,
+        help_text="Token for this client's Vapi webhook URL. Leave blank, then use admin action 'Generate Vapi webhook token'. Webhook URL: /api/v1/vapi/webhook/<token>/",
+    )
+    # Optional: store after you create the agent in Vapi (for your reference only)
+    vapi_assistant_id = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Vapi Assistant/Agent ID from the Vapi dashboard. For your reference and quick lookup.",
+    )
+    vapi_phone_number = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Phone number assigned to this client's Vapi agent (e.g. +1 555…). For support reference.",
+    )
+
+    # Onboarding / setup tracking (for admin use)
+    SETUP_STATUS_CHOICES = [
+        ("not_started", "Not started"),
+        ("token_generated", "Token generated"),
+        ("vapi_configured", "Vapi agent configured"),
+        ("client_notified", "Client notified"),
+        ("live", "Live"),
+    ]
+    setup_status = models.CharField(
+        max_length=32,
+        choices=SETUP_STATUS_CHOICES,
+        default="not_started",
+        help_text="Track onboarding progress for this client.",
+    )
+
+    # Internal notes (only visible in admin)
+    admin_notes = models.TextField(
+        blank=True,
+        help_text="Internal notes about this client (not visible to the client).",
+    )
+
     # Account settings
     currency = models.CharField(max_length=8, default='USD', choices=[
         ('USD', 'USD - US Dollar'),
