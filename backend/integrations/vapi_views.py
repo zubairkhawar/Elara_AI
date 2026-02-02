@@ -30,51 +30,53 @@ def _link_call_summary_to_booking_and_client(instance: CallSummary) -> None:
     """
     Try to set related_client and related_booking on a CallSummary by matching
     caller phone to a Client and then finding a recent Booking for that client.
+    Never raises; logs and returns on any error so webhook response is not broken.
     """
-    caller = (_normalize_phone(instance.caller_number) or "").strip()
-    if not caller:
-        return
-    owner = instance.owner_id
-    # Find client by owner and phone (normalize client phone for comparison)
-    from clients.models import Client
-    from bookings.models import Booking
+    try:
+        caller = (_normalize_phone(instance.caller_number) or "").strip()
+        if not caller:
+            return
+        owner = instance.owner_id
+        from clients.models import Client
+        from bookings.models import Booking
 
-    clients = list(
-        Client.objects.filter(owner_id=owner).only("id", "phone_number")
-    )
-    related_client = None
-    for c in clients:
-        if _normalize_phone(c.phone_number) and caller in _normalize_phone(c.phone_number):
-            related_client = c
-            break
-        if _normalize_phone(c.phone_number) and _normalize_phone(c.phone_number) in caller:
-            related_client = c
-            break
-    if not related_client:
-        return
-    instance.related_client_id = related_client.id
-    # Find a booking for this client created around the call end time
-    call_time = instance.ended_at or instance.created_at
-    if not call_time:
-        instance.save(update_fields=["related_client_id"])
-        return
-    if timezone.is_naive(call_time):
-        call_time = timezone.make_aware(call_time)
-    window_start = call_time - timedelta(minutes=15)
-    window_end = call_time + timedelta(minutes=2)
-    booking = (
-        Booking.objects.filter(
-            owner_id=owner,
-            client_id=related_client.id,
-            created_at__gte=window_start,
-            created_at__lte=window_end,
+        clients = list(
+            Client.objects.filter(owner_id=owner).only("id", "phone_number")
         )
-        .order_by("-created_at")
-        .first()
-    )
-    if booking:
-        instance.related_booking_id = booking.id
-    instance.save(update_fields=["related_client_id", "related_booking_id"])
+        related_client = None
+        for c in clients:
+            if _normalize_phone(c.phone_number) and caller in _normalize_phone(c.phone_number):
+                related_client = c
+                break
+            if _normalize_phone(c.phone_number) and _normalize_phone(c.phone_number) in caller:
+                related_client = c
+                break
+        if not related_client:
+            return
+        instance.related_client_id = related_client.id
+        call_time = instance.ended_at or instance.created_at
+        if not call_time:
+            instance.save(update_fields=["related_client_id"])
+            return
+        if timezone.is_naive(call_time):
+            call_time = timezone.make_aware(call_time)
+        window_start = call_time - timedelta(minutes=15)
+        window_end = call_time + timedelta(minutes=2)
+        booking = (
+            Booking.objects.filter(
+                owner_id=owner,
+                client_id=related_client.id,
+                created_at__gte=window_start,
+                created_at__lte=window_end,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if booking:
+            instance.related_booking_id = booking.id
+        instance.save(update_fields=["related_client_id", "related_booking_id"])
+    except Exception as e:
+        logger.exception("Vapi webhook: link_call_summary_to_booking_and_client failed: %s", e)
 
 
 def _get_webhook_owner():
@@ -191,7 +193,7 @@ def _process_vapi_webhook(request, owner: User) -> JsonResponse:
 
     instance = CallSummary.objects.create(
         owner=owner,
-        vapi_call_id=call_id or None,
+        vapi_call_id=call_id or "",
         caller_name=caller_name,
         caller_number=caller_number,
         service_name=service_name,
@@ -230,11 +232,18 @@ def vapi_webhook_by_token(request, token: str):
     Resolve the client (User) by vapi_webhook_token and create/update CallSummary for that user.
     Use this URL when configuring each Vapi agent (one agent per client).
     """
-    owner = User.objects.filter(
-        vapi_webhook_token=token.strip(),
-        is_active=True,
-    ).first()
-    if not owner:
-        logger.warning("Vapi webhook: unknown or inactive token")
-        return JsonResponse({"ok": False, "reason": "unknown_token"}, status=200)
-    return _process_vapi_webhook(request, owner)
+    try:
+        owner = User.objects.filter(
+            vapi_webhook_token=token.strip(),
+            is_active=True,
+        ).first()
+        if not owner:
+            logger.warning("Vapi webhook: unknown or inactive token")
+            return JsonResponse({"ok": False, "reason": "unknown_token"}, status=200)
+        return _process_vapi_webhook(request, owner)
+    except Exception as e:
+        logger.exception("Vapi webhook: unhandled error: %s", e)
+        return JsonResponse(
+            {"ok": False, "error": str(e)},
+            status=500,
+        )
