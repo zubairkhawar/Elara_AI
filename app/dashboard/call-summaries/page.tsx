@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Search, Filter, PhoneCall, Clock, User, ChevronLeft, ChevronRight, FileText, X } from 'lucide-react';
+import { Search, Filter, PhoneCall, Clock, User, ChevronLeft, ChevronRight, FileText, X, Trash2 } from 'lucide-react';
 import { authenticatedFetch } from '@/utils/api';
+import { useToast } from '@/contexts/ToastContext';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -40,6 +41,7 @@ function formatCallDate(iso: string | null): string {
 }
 
 export default function CallSummariesPage() {
+  const toast = useToast();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedService, setSelectedService] = useState<string | 'all'>('all');
@@ -49,6 +51,10 @@ export default function CallSummariesPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [transcriptModal, setTranscriptModal] = useState<CallSummaryRow | null>(null);
+  const [deleteAllConfirmOpen, setDeleteAllConfirmOpen] = useState(false);
+  const [deleteAllPending, setDeleteAllPending] = useState(false);
+  const [deleteOneId, setDeleteOneId] = useState<number | null>(null);
+  const [deleteOnePending, setDeleteOnePending] = useState(false);
   const pageSize = 10;
 
   // Debounce search input (300ms)
@@ -139,6 +145,46 @@ export default function CallSummariesPage() {
     loadServices();
   }, []);
 
+  const handleDeleteAll = useCallback(async () => {
+    setDeleteAllPending(true);
+    try {
+      const res = await authenticatedFetch(
+        `${API_BASE_URL}/api/v1/call-summaries/delete-all/`,
+        { method: 'POST' }
+      );
+      if (!res.ok) throw new Error('Failed to delete all transcripts');
+      setDeleteAllConfirmOpen(false);
+      toast.success('All transcripts deleted');
+      await fetchCallSummaries();
+      setPage(1);
+    } catch {
+      toast.error('Failed to delete all transcripts');
+    } finally {
+      setDeleteAllPending(false);
+    }
+  }, [toast, fetchCallSummaries]);
+
+  const handleDeleteOne = useCallback(
+    async (id: number) => {
+      setDeleteOnePending(true);
+      try {
+        const res = await authenticatedFetch(
+          `${API_BASE_URL}/api/v1/call-summaries/${id}/`,
+          { method: 'DELETE' }
+        );
+        if (!res.ok) throw new Error('Failed to delete transcript');
+        setDeleteOneId(null);
+        toast.success('Transcript deleted');
+        await fetchCallSummaries();
+      } catch {
+        toast.error('Failed to delete transcript');
+      } finally {
+        setDeleteOnePending(false);
+      }
+    },
+    [toast, fetchCallSummaries]
+  );
+
   const totalPages = Math.max(1, Math.ceil(calls.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * pageSize;
@@ -182,40 +228,51 @@ export default function CallSummariesPage() {
             className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 rounded-lg bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm sm:text-base"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedService('all');
-              setSearch('');
-              setPage(1);
-            }}
-            className={`flex-1 inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border text-xs sm:text-sm font-medium transition-colors ${
-              selectedService === 'all'
-                ? 'bg-purple-600 text-white border-purple-600'
-                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            All services
-          </button>
-          {serviceOptions.map((name) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 flex-1 min-w-0">
             <button
-              key={name}
               type="button"
               onClick={() => {
-                setSelectedService(name);
+                setSelectedService('all');
+                setSearch('');
                 setPage(1);
               }}
-              className={`hidden sm:inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-                selectedService === name
+              className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                selectedService === 'all'
                   ? 'bg-purple-600 text-white border-purple-600'
                   : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
               }`}
             >
-              {name}
+              <Filter className="w-4 h-4" />
+              All
             </button>
-          ))}
+            {serviceOptions.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => {
+                  setSelectedService(name);
+                  setPage(1);
+                }}
+                className={`hidden sm:inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                  selectedService === name
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setDeleteAllConfirmOpen(true)}
+            disabled={calls.length === 0}
+            className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs sm:text-sm font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete all transcripts
+          </button>
         </div>
       </div>
 
@@ -259,14 +316,24 @@ export default function CallSummariesPage() {
             <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2 py-1 mt-1 inline-flex max-w-fit">
               {call.outcome}
             </p>
-            <button
-              type="button"
-              onClick={() => setTranscriptModal(call)}
-              className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-medium"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              View transcript
-            </button>
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTranscriptModal(call)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-medium"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                View transcript
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteOneId(call.id)}
+                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                aria-label="Delete transcript"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -355,14 +422,24 @@ export default function CallSummariesPage() {
                     </p>
                   </td>
                   <td className="px-4 sm:px-6 md:px-8 py-4">
-                    <button
-                      type="button"
-                      onClick={() => setTranscriptModal(call)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-medium transition-colors"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      View transcript
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTranscriptModal(call)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-medium transition-colors"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        View transcript
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteOneId(call.id)}
+                        className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                        aria-label="Delete transcript"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -458,6 +535,66 @@ export default function CallSummariesPage() {
               ) : (
                 <p className="text-gray-500 text-sm">No transcript available for this call.</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete all confirmation */}
+      {deleteAllConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !deleteAllPending && setDeleteAllConfirmOpen(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete all transcripts?</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              This will permanently delete all call summaries and transcripts. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => !deleteAllPending && setDeleteAllConfirmOpen(false)}
+                disabled={deleteAllPending}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAll}
+                disabled={deleteAllPending}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteAllPending ? 'Deleting…' : 'Delete all'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete one confirmation */}
+      {deleteOneId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !deleteOnePending && setDeleteOneId(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete this transcript?</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              This call summary and transcript will be permanently removed.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => !deleteOnePending && setDeleteOneId(null)}
+                disabled={deleteOnePending}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteOne(deleteOneId)}
+                disabled={deleteOnePending}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteOnePending ? 'Deleting…' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>
