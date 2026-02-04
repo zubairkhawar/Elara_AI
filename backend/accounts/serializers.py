@@ -22,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
             "currency",
             "email_notifications",
             "sms_notifications",
+            "sms_webhook_url",
         ]
         # Email and id are not editable through the profile endpoint.
         read_only_fields = ["id", "email"]

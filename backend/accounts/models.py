@@ -105,6 +105,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     ])
     email_notifications = models.BooleanField(default=True, help_text='Receive email notifications for bookings and updates')
     sms_notifications = models.BooleanField(default=False, help_text='Receive SMS notifications for bookings')
+    sms_webhook_url = models.URLField(
+        blank=True,
+        help_text=(
+            "Optional webhook URL to send alerts for SMS/WhatsApp or other apps. "
+            "When SMS notifications are enabled, a POST with alert details will be sent here."
+        ),
+    )
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

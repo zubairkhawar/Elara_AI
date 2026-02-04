@@ -38,6 +38,7 @@ export default function AccountSettingsPage() {
   const [currency, setCurrency] = useState('USD');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
+  const [smsWebhookUrl, setSmsWebhookUrl] = useState('');
   
   // Password change state
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -77,6 +78,7 @@ export default function AccountSettingsPage() {
           setCurrency(data.currency || 'USD');
           setEmailNotifications(data.email_notifications !== false);
           setSmsNotifications(data.sms_notifications === true);
+          setSmsWebhookUrl(data.sms_webhook_url || '');
         } else if (res.status === 401) {
           setLoading(false);
           return;
@@ -109,6 +111,7 @@ export default function AccountSettingsPage() {
           currency,
           email_notifications: emailNotifications,
           sms_notifications: smsNotifications,
+          sms_webhook_url: smsWebhookUrl || '',
         }),
       });
 
@@ -124,6 +127,7 @@ export default function AccountSettingsPage() {
       setCurrency(updatedData.currency);
       setEmailNotifications(updatedData.email_notifications);
       setSmsNotifications(updatedData.sms_notifications);
+      setSmsWebhookUrl(updatedData.sms_webhook_url || '');
       
       // Update user data in AuthContext and localStorage
       if (updateProfile) {
@@ -131,6 +135,7 @@ export default function AccountSettingsPage() {
           currency: updatedData.currency,
           email_notifications: updatedData.email_notifications,
           sms_notifications: updatedData.sms_notifications,
+          sms_webhook_url: updatedData.sms_webhook_url,
         } as any);
       }
       
@@ -562,7 +567,7 @@ export default function AccountSettingsPage() {
             <div>
               <p className="font-medium text-gray-900">SMS Notifications</p>
               <p className="text-sm text-gray-500 mt-0.5">
-                Receive booking reminders via text message
+                Receive booking reminders via text message / WhatsApp via your own provider
               </p>
             </div>
             <button
@@ -579,6 +584,23 @@ export default function AccountSettingsPage() {
               />
             </button>
           </label>
+
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              SMS / WhatsApp Webhook URL
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              Optional. When SMS notifications are enabled, the app will POST alert details to this
+              URL so you can send messages via Twilio, WhatsApp Cloud API, or any other service.
+            </p>
+            <input
+              type="url"
+              value={smsWebhookUrl}
+              onChange={(e) => setSmsWebhookUrl(e.target.value)}
+              placeholder="https://your-service.com/notifications/webhook"
+              className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm sm:text-base"
+            />
+          </div>
         </div>
       </div>
 

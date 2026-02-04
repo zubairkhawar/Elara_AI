@@ -6,6 +6,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Bell, User, Settings, LogOut, Search, X, Menu } from 'lucide-react';
 import { mainNavItems, supportNavItems, NavItem } from './navConfig';
 import { useAuth } from '@/contexts/AuthContext';
+import { authenticatedFetch } from '@/utils/api';
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 interface Notification {
   id: number;
@@ -21,32 +25,9 @@ interface MenuItem {
   action?: () => void;
 }
 
-const notifications: Notification[] = [
-  {
-    id: 1,
-    title: 'New booking received',
-    message: 'John Doe booked an appointment for tomorrow at 2 PM',
-    time: '5 minutes ago',
-    unread: true,
-  },
-  {
-    id: 2,
-    title: 'Call completed',
-    message: 'Successfully handled a customer inquiry',
-    time: '1 hour ago',
-    unread: true,
-  },
-  {
-    id: 3,
-    title: 'Weekly report ready',
-    message: 'Your weekly analytics report is available',
-    time: '3 hours ago',
-    unread: false,
-  },
-];
-
 export default function TopBar() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,6 +49,86 @@ export default function TopBar() {
       .slice(0, 2)
       .toUpperCase() ||
     'EL';
+
+  // Load initial alerts for notification dropdown
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const loadAlerts = async () => {
+      try {
+        const res = await authenticatedFetch(
+          `${API_BASE_URL}/api/v1/alerts/?is_read=false`,
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as Array<{
+          id: number;
+          title: string;
+          message: string;
+          time_ago: string;
+          is_read: boolean;
+        }>;
+        const mapped: Notification[] = data.map((a) => ({
+          id: a.id,
+          title: a.title,
+          message: a.message,
+          time: a.time_ago || '',
+          unread: !a.is_read,
+        }));
+        setNotifications(mapped);
+      } catch (err) {
+        console.error('Failed to load alerts for notifications:', err);
+      }
+    };
+    loadAlerts();
+  }, []);
+
+  // Live alerts via Server-Sent Events (SSE)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('elara_access_token');
+    if (!token) return;
+
+    const encoded = encodeURIComponent(token);
+    const url = `${API_BASE_URL}/api/v1/alerts/stream/?access_token=${encoded}`;
+    const es = new EventSource(url);
+
+    es.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as {
+          id: number;
+          title: string;
+          message: string;
+          time_ago?: string;
+          is_read: boolean;
+        };
+        const notif: Notification = {
+          id: payload.id,
+          title: payload.title,
+          message: payload.message,
+          time: payload.time_ago || 'Just now',
+          unread: !payload.is_read,
+        };
+        setNotifications((prev) => {
+          const existingIndex = prev.findIndex((n) => n.id === notif.id);
+          if (existingIndex !== -1) {
+            const copy = [...prev];
+            copy[existingIndex] = notif;
+            return copy;
+          }
+          return [notif, ...prev].slice(0, 20);
+        });
+      } catch (err) {
+        console.error('Failed to parse alert event:', err);
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error('Alerts stream error:', err);
+    };
+
+    return () => {
+      es.close();
+    };
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -208,7 +269,12 @@ export default function TopBar() {
                       </button>
                     </div>
                     <div className="max-h-[70vh] overflow-y-auto">
-                      {notifications.map((notification) => (
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-sm text-gray-500 text-center">
+                          No notifications yet.
+                        </div>
+                      ) : (
+                      notifications.map((notification) => (
                         <div
                           key={notification.id}
                           className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
@@ -228,10 +294,8 @@ export default function TopBar() {
                               <p className="text-gray-600 text-sm mt-1">
                                 {notification.message}
                               </p>
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs text-gray-500">Project</span>
-                                <span className="text-xs text-gray-400">•</span>
-                                <span className="text-xs text-gray-500">{notification.time}</span>
+                              <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                                <span>{notification.time}</span>
                               </div>
                             </div>
                             {notification.unread && (
@@ -240,6 +304,7 @@ export default function TopBar() {
                           </div>
                         </div>
                       ))}
+                      )}
                     </div>
                     <div className="p-3 border-t border-gray-200 text-center">
                       <button className="text-sm text-purple-600 hover:underline font-medium w-full">
@@ -262,7 +327,12 @@ export default function TopBar() {
                       </button>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
-                      {notifications.map((notification) => (
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-sm text-gray-500 text-center">
+                          No notifications yet.
+                        </div>
+                      ) : (
+                      notifications.map((notification) => (
                         <div
                           key={notification.id}
                           className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
@@ -282,10 +352,14 @@ export default function TopBar() {
                               <p className="text-gray-600 text-sm mt-1">
                                 {notification.message}
                               </p>
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs text-gray-500">Project</span>
-                                <span className="text-xs text-gray-400">•</span>
-                                <span className="text-xs text-gray-500">{notification.time}</span>
+                              <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                                <span>{notification.time}</span>
+                                {notification.unread && (
+                                  <span className="inline-flex items-center gap-1 text-emerald-600">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                    New
+                                  </span>
+                                )}
                               </div>
                             </div>
                             {notification.unread && (
@@ -294,6 +368,7 @@ export default function TopBar() {
                           </div>
                         </div>
                       ))}
+                      )}
                     </div>
                     <div className="p-3 border-t border-gray-200 text-center">
                       <button className="text-sm text-purple-600 hover:underline font-medium">

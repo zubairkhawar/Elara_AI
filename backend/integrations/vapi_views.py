@@ -137,7 +137,8 @@ def _link_call_summary_to_booking_and_client(instance: CallSummary) -> None:
             start = start.replace(hour=9, minute=0, second=0, microsecond=0)
             if timezone.is_naive(start):
                 start = timezone.make_aware(start)
-            end = start + timedelta(hours=1)
+            # All bookings are fixed at 30 minutes
+            end = start + timedelta(minutes=30)
             booking = Booking.objects.create(
                 owner_id=owner_id,
                 client_id=related_client.id,
@@ -172,6 +173,18 @@ def _parse_iso_datetime(s: str | None):
         return datetime.fromisoformat(s.replace("Z", "+00:00"))
     except (ValueError, TypeError):
         return None
+
+
+def _get_owner_by_webhook_token(token: str) -> User | None:
+    """
+    Resolve a business owner (User) from their vapi_webhook_token.
+    Used both for inbound webhooks and for Vapi helper APIs
+    (services + availability) that are called during a call.
+    """
+    token = (token or "").strip()
+    if not token:
+        return None
+    return User.objects.filter(vapi_webhook_token=token, is_active=True).first()
 
 
 def _process_vapi_webhook(request, owner: User) -> JsonResponse:
@@ -335,10 +348,7 @@ def vapi_webhook_by_token(request, token: str):
     """
     logger.info("Vapi webhook received: POST /api/v1/vapi/webhook/<token>/ (token=%s)", token[:8] + "...")
     try:
-        owner = User.objects.filter(
-            vapi_webhook_token=token.strip(),
-            is_active=True,
-        ).first()
+        owner = _get_owner_by_webhook_token(token)
         if not owner:
             logger.warning("Vapi webhook: unknown or inactive token")
             return JsonResponse({"ok": False, "reason": "unknown_token"}, status=200)
@@ -349,3 +359,110 @@ def vapi_webhook_by_token(request, token: str):
             {"ok": False, "error": str(e)},
             status=500,
         )
+
+
+@require_http_methods(["GET"])
+def vapi_services_by_token(request, token: str) -> JsonResponse:
+    """
+    Lightweight services endpoint for Vapi.
+
+    URL: /api/v1/vapi/services/<token>/
+
+    Returns active services for the client identified by vapi_webhook_token.
+    Intended to be called from the Vapi agent during a call (no JWT needed).
+    """
+    try:
+        from bookings.models import Service
+
+        owner = _get_owner_by_webhook_token(token)
+        if not owner:
+            return JsonResponse({"ok": False, "reason": "unknown_token"}, status=200)
+
+        services = list(
+            Service.objects.filter(owner=owner, is_active=True)
+            .order_by("name")
+            .values("id", "name", "category", "price", "currency", "is_active")
+        )
+        return JsonResponse({"ok": True, "services": services})
+    except Exception as e:
+        logger.exception("Vapi services endpoint failed: %s", e)
+        return JsonResponse(
+            {"ok": False, "error": "internal_error"},
+            status=500,
+        )
+
+
+@require_http_methods(["GET"])
+def vapi_available_slots_by_token(request, token: str) -> JsonResponse:
+    """
+    Availability endpoint for Vapi.
+
+    URL: /api/v1/vapi/availability/<token>/?date=YYYY-MM-DD
+
+    Returns free 30-minute slots for that date for the client identified
+    by vapi_webhook_token. Intended for in-call availability checks.
+    """
+    from bookings.models import Booking
+
+    owner = _get_owner_by_webhook_token(token)
+    if not owner:
+        return JsonResponse({"ok": False, "reason": "unknown_token"}, status=200)
+
+    date_str = request.GET.get("date") or ""
+    if not date_str:
+        return JsonResponse(
+            {"ok": False, "error": 'missing_param', "detail": 'Query param "date" (YYYY-MM-DD) is required'},
+            status=400,
+        )
+    try:
+        day = datetime.fromisoformat(date_str).date()
+    except ValueError:
+        return JsonResponse(
+            {"ok": False, "error": "invalid_date", "detail": "Use YYYY-MM-DD"},
+            status=400,
+        )
+
+    # Fixed to 30-minute slots between 08:00 and 18:00 server time
+    slot_minutes = 30
+    start_hour = 8
+    end_hour = 18
+
+    day_start = timezone.make_aware(
+        datetime.combine(
+            day,
+            datetime.min.time().replace(hour=start_hour, minute=0, second=0, microsecond=0),
+        )
+    )
+    day_end = timezone.make_aware(
+        datetime.combine(
+            day,
+            datetime.min.time().replace(hour=end_hour, minute=0, second=0, microsecond=0),
+        )
+    )
+
+    existing = list(
+        Booking.objects.filter(
+            owner=owner,
+            status="confirmed",
+            starts_at__lt=day_end,
+            ends_at__gt=day_start,
+        ).values_list("starts_at", "ends_at")
+    )
+
+    slots: list[str] = []
+    slot_start = day_start
+    while slot_start < day_end:
+        slot_end = slot_start + timedelta(minutes=slot_minutes)
+        occupied = any(start < slot_end and end > slot_start for start, end in existing)
+        if not occupied:
+            slots.append(slot_start.strftime("%H:%M"))
+        slot_start = slot_end
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "date": date_str,
+            "slot_minutes": slot_minutes,
+            "slots": slots,
+        }
+    )

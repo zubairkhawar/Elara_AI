@@ -124,6 +124,17 @@ export default function CallSummariesPage() {
     fetchCallSummaries();
   }, [fetchCallSummaries]);
 
+  // Auto-refresh call summaries so new calls appear without manual reload
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const interval = window.setInterval(() => {
+      fetchCallSummaries();
+    }, 30000); // every 30 seconds
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [fetchCallSummaries]);
+
   // Load services for filter chips
   useEffect(() => {
     if (typeof window === 'undefined') return;

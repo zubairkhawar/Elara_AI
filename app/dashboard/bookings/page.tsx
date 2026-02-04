@@ -142,6 +142,17 @@ export default function BookingsPage() {
     fetchServices();
   }, []);
 
+  // Auto-refresh bookings list so new bookings (e.g. from Vapi) appear without manual reload
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const interval = window.setInterval(() => {
+      fetchBookings();
+    }, 30000); // every 30 seconds
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const formatDuration = (startsAt: string, endsAt: string): string => {
     const start = new Date(startsAt);
     const end = new Date(endsAt);
@@ -206,8 +217,8 @@ export default function BookingsPage() {
     setError('');
     try {
       const startDateTime = new Date(`${formStartDate}T${formStartTime}`);
-      const durationMinutes = parseInt(formDuration);
-      const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
+      // All bookings are fixed at 30 minutes
+      const endDateTime = new Date(startDateTime.getTime() + 30 * 60000);
 
       const bookingData: any = {
         client: parseInt(formClientId),
