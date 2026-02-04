@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, Check, X, DollarSign, Loader2, Tag } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Loader2, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$',
+  GBP: '£',
+  AED: 'د.إ',
+  SAR: '﷼',
+  PKR: '₨',
+};
 
 type Service = {
   id: number;
@@ -36,6 +44,7 @@ export default function ServicesPage() {
 
   const [selectedServices, setSelectedServices] = useState<number[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [userCurrency, setUserCurrency] = useState('USD');
 
   const [error, setError] = useState('');
 
@@ -53,6 +62,25 @@ export default function ServicesPage() {
     }
     return headers;
   };
+
+  // Fetch user currency from account settings so Price uses correct symbol
+  useEffect(() => {
+    if (!accessToken) return;
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/v1/accounts/me/`, {
+          headers: getHeaders(),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUserCurrency(data.currency || 'USD');
+        }
+      } catch (err) {
+        console.error('Failed to fetch user currency:', err);
+      }
+    };
+    fetchUser();
+  }, [accessToken]);
 
   const fetchServices = async () => {
     if (!accessToken) {
@@ -195,7 +223,7 @@ export default function ServicesPage() {
           name: newName.trim(),
           category: newCategory.trim() || undefined,
           price: newPrice.trim(),
-          currency: 'USD',
+          currency: userCurrency,
           is_active: true,
         }),
       });
@@ -336,8 +364,8 @@ export default function ServicesPage() {
               Price
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <DollarSign className="w-4 h-4" />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                {CURRENCY_SYMBOLS[userCurrency] ?? userCurrency}
               </span>
               <input
                 type="number"
@@ -489,8 +517,8 @@ export default function ServicesPage() {
                         </div>
                         <div className="w-full md:w-40">
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                              <DollarSign className="w-4 h-4" />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                              {CURRENCY_SYMBOLS[userCurrency] ?? userCurrency}
                             </span>
                             <input
                               type="number"
@@ -526,8 +554,8 @@ export default function ServicesPage() {
                           )}
                         </div>
                         <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-1 mt-0.5">
-                          <DollarSign className="w-3 h-3" />
-                          {service.price} {service.currency}
+                          <span>{CURRENCY_SYMBOLS[service.currency] ?? service.currency}</span>
+                          {service.price}
                           {!service.is_active && (
                             <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-medium">
                               Inactive
