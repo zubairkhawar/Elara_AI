@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Check, 
@@ -101,44 +101,67 @@ export default function AccountSettingsPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const token =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('elara_access_token')
-          : null;
-      if (!token) {
+  const FETCH_TIMEOUT_MS = 20000; // 20s so slow backend can still respond
+
+  const fetchUserData = useCallback(async () => {
+    const token =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('elara_access_token')
+        : null;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    setLoadError('');
+    setLoading(true);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    try {
+      const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/accounts/me/`, {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        setCurrency(data.currency || 'USD');
+        setTimezone(data.timezone || 'UTC');
+        setEmailNotifications(data.email_notifications !== false);
+        setSmsNotifications(data.sms_notifications === true);
+        setSmsWebhookUrl(data.sms_webhook_url || '');
+        setLoadError('');
+      } else if (res.status === 401) {
+        setLoadError('');
         setLoading(false);
         return;
+      } else {
+        setLoadError('Could not load settings. Please try again.');
       }
-
-      try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/accounts/me/`);
-
-        if (res.ok) {
-          const data = await res.json();
-          setCurrency(data.currency || 'USD');
-          setTimezone(data.timezone || 'UTC');
-          setEmailNotifications(data.email_notifications !== false);
-          setSmsNotifications(data.sms_notifications === true);
-          setSmsWebhookUrl(data.sms_webhook_url || '');
-        } else if (res.status === 401) {
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if ((err as Error)?.name === 'AbortError') {
+        setLoadError('Request timed out. The server may be slow—click Retry or try again in a moment.');
+      } else {
         console.error('Failed to fetch user data:', err);
-      } finally {
-        setLoading(false);
+        setLoadError('Could not load settings. Check your connection and try again.');
       }
-    };
-
-    fetchUserData();
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   const handleSave = async () => {
     const token =
@@ -508,6 +531,20 @@ export default function AccountSettingsPage() {
           Manage your account preferences and settings.
         </p>
       </div>
+
+      {/* Load error (timeout or network) with Retry */}
+      {loadError && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex flex-wrap items-center justify-between gap-3">
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={() => fetchUserData()}
+            className="px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Success/Error Messages */}
       {successMessage && (
