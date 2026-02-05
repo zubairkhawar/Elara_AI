@@ -103,6 +103,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('SAR', 'SAR - Saudi Riyal'),
         ('PKR', 'PKR - Pakistani Rupee'),
     ])
+    # IANA timezone name (e.g. Asia/Karachi, Europe/London). Used for heatmap and any time-based UI.
+    timezone = models.CharField(
+        max_length=64,
+        default="UTC",
+        blank=True,
+        help_text="User's timezone for dashboard (e.g. Asia/Karachi, Europe/London).",
+    )
     email_notifications = models.BooleanField(default=True, help_text='Receive email notifications for bookings and updates')
     sms_notifications = models.BooleanField(default=False, help_text='Receive SMS notifications for bookings')
     sms_webhook_url = models.URLField(

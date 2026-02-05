@@ -12,7 +12,8 @@ import {
   Download, 
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  Globe
 } from 'lucide-react';
 import { authenticatedFetch } from '@/utils/api';
 import { useRouter } from 'next/navigation';
@@ -29,6 +30,50 @@ const CURRENCIES = [
   { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨' },
 ];
 
+// IANA timezones grouped by region for account settings. Used for heatmap and time-based UI.
+const TIMEZONES_BY_REGION: { region: string; zones: { value: string; label: string }[] }[] = [
+  { region: 'UTC', zones: [{ value: 'UTC', label: 'UTC' }] },
+  { region: 'Europe', zones: [
+    { value: 'Europe/London', label: 'United Kingdom (London)' },
+    { value: 'Europe/Dublin', label: 'Ireland (Dublin)' },
+    { value: 'Europe/Paris', label: 'France (Paris)' },
+    { value: 'Europe/Berlin', label: 'Germany (Berlin)' },
+    { value: 'Europe/Amsterdam', label: 'Netherlands (Amsterdam)' },
+    { value: 'Europe/Madrid', label: 'Spain (Madrid)' },
+    { value: 'Europe/Rome', label: 'Italy (Rome)' },
+  ]},
+  { region: 'Americas', zones: [
+    { value: 'America/New_York', label: 'US East (New York)' },
+    { value: 'America/Chicago', label: 'US Central (Chicago)' },
+    { value: 'America/Denver', label: 'US Mountain (Denver)' },
+    { value: 'America/Los_Angeles', label: 'US West (Los Angeles)' },
+    { value: 'America/Toronto', label: 'Canada (Toronto)' },
+    { value: 'America/Vancouver', label: 'Canada (Vancouver)' },
+    { value: 'America/Mexico_City', label: 'Mexico (Mexico City)' },
+    { value: 'America/Sao_Paulo', label: 'Brazil (São Paulo)' },
+  ]},
+  { region: 'Asia', zones: [
+    { value: 'Asia/Dubai', label: 'UAE (Dubai)' },
+    { value: 'Asia/Karachi', label: 'Pakistan (Karachi)' },
+    { value: 'Asia/Kolkata', label: 'India (Mumbai/Delhi)' },
+    { value: 'Asia/Bangkok', label: 'Thailand (Bangkok)' },
+    { value: 'Asia/Singapore', label: 'Singapore' },
+    { value: 'Asia/Hong_Kong', label: 'Hong Kong' },
+    { value: 'Asia/Shanghai', label: 'China (Shanghai)' },
+    { value: 'Asia/Tokyo', label: 'Japan (Tokyo)' },
+  ]},
+  { region: 'Australia & Pacific', zones: [
+    { value: 'Australia/Sydney', label: 'Australia (Sydney)' },
+    { value: 'Australia/Melbourne', label: 'Australia (Melbourne)' },
+    { value: 'Australia/Perth', label: 'Australia (Perth)' },
+    { value: 'Pacific/Auckland', label: 'New Zealand (Auckland)' },
+  ]},
+  { region: 'Africa', zones: [
+    { value: 'Africa/Cairo', label: 'Egypt (Cairo)' },
+    { value: 'Africa/Johannesburg', label: 'South Africa (Johannesburg)' },
+  ]},
+];
+
 
 export default function AccountSettingsPage() {
   const { user, updateProfile, logout } = useAuth();
@@ -36,6 +81,7 @@ export default function AccountSettingsPage() {
   
   // Settings state
   const [currency, setCurrency] = useState('USD');
+  const [timezone, setTimezone] = useState('UTC');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [smsWebhookUrl, setSmsWebhookUrl] = useState('');
@@ -76,6 +122,7 @@ export default function AccountSettingsPage() {
         if (res.ok) {
           const data = await res.json();
           setCurrency(data.currency || 'USD');
+          setTimezone(data.timezone || 'UTC');
           setEmailNotifications(data.email_notifications !== false);
           setSmsNotifications(data.sms_notifications === true);
           setSmsWebhookUrl(data.sms_webhook_url || '');
@@ -109,6 +156,7 @@ export default function AccountSettingsPage() {
         method: 'PATCH',
         body: JSON.stringify({
           currency,
+          timezone: timezone || 'UTC',
           email_notifications: emailNotifications,
           sms_notifications: smsNotifications,
           sms_webhook_url: smsWebhookUrl || '',
@@ -125,6 +173,7 @@ export default function AccountSettingsPage() {
 
       const updatedData = await res.json();
       setCurrency(updatedData.currency);
+      setTimezone(updatedData.timezone || 'UTC');
       setEmailNotifications(updatedData.email_notifications);
       setSmsNotifications(updatedData.sms_notifications);
       setSmsWebhookUrl(updatedData.sms_webhook_url || '');
@@ -133,6 +182,7 @@ export default function AccountSettingsPage() {
       if (updateProfile) {
         await updateProfile({
           currency: updatedData.currency,
+          timezone: updatedData.timezone,
           email_notifications: updatedData.email_notifications,
           sms_notifications: updatedData.sms_notifications,
           sms_webhook_url: updatedData.sms_webhook_url,
@@ -470,6 +520,41 @@ export default function AccountSettingsPage() {
           {errorMessage}
         </div>
       )}
+
+      {/* Timezone */}
+      <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-blue-50">
+            <Globe className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Timezone
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Your timezone for the dashboard (e.g. booking heatmap and times).
+            </p>
+          </div>
+        </div>
+        <select
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+          className="w-full max-w-md px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm sm:text-base"
+        >
+          {!TIMEZONES_BY_REGION.some(({ zones }) => zones.some((z) => z.value === timezone)) && timezone !== 'UTC' && (
+            <optgroup label="Current">
+              <option value={timezone}>{timezone}</option>
+            </optgroup>
+          )}
+          {TIMEZONES_BY_REGION.map(({ region, zones }) => (
+            <optgroup key={region} label={region}>
+              {zones.map((z) => (
+                <option key={z.value} value={z.value}>{z.label}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
 
       {/* Currency Preference */}
       <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8">

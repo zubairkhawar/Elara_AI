@@ -5,6 +5,7 @@ import logging
 import re
 from decimal import Decimal
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -383,7 +384,8 @@ def vapi_services_by_token(request, token: str) -> JsonResponse:
             .order_by("name")
             .values("id", "name", "category", "price", "currency", "is_active")
         )
-        return JsonResponse({"ok": True, "services": services})
+        tz_str = (getattr(owner, "timezone", None) or "").strip() or "UTC"
+        return JsonResponse({"ok": True, "services": services, "timezone": tz_str})
     except Exception as e:
         logger.exception("Vapi services endpoint failed: %s", e)
         return JsonResponse(
@@ -422,46 +424,55 @@ def vapi_available_slots_by_token(request, token: str) -> JsonResponse:
             status=400,
         )
 
-    # Fixed to 30-minute slots between 08:00 and 18:00 server time
+    # Use owner's timezone from account settings so 08:00–18:00 is in their local time
+    tz_str = (getattr(owner, "timezone", None) or "").strip() or "UTC"
+    try:
+        tz = ZoneInfo(tz_str)
+    except Exception:
+        tz = timezone.utc
+        tz_str = "UTC"
+
     slot_minutes = 30
     start_hour = 8
     end_hour = 18
 
-    day_start = timezone.make_aware(
-        datetime.combine(
-            day,
-            datetime.min.time().replace(hour=start_hour, minute=0, second=0, microsecond=0),
-        )
-    )
-    day_end = timezone.make_aware(
-        datetime.combine(
-            day,
-            datetime.min.time().replace(hour=end_hour, minute=0, second=0, microsecond=0),
-        )
-    )
+    # Build day window in owner's timezone, then convert to UTC for DB query
+    day_start_local = datetime.combine(
+        day,
+        datetime.min.time().replace(hour=start_hour, minute=0, second=0, microsecond=0),
+    ).replace(tzinfo=tz)
+    day_end_local = datetime.combine(
+        day,
+        datetime.min.time().replace(hour=end_hour, minute=0, second=0, microsecond=0),
+    ).replace(tzinfo=tz)
+    day_start_utc = day_start_local.astimezone(timezone.utc)
+    day_end_utc = day_end_local.astimezone(timezone.utc)
 
     existing = list(
         Booking.objects.filter(
             owner=owner,
             status="confirmed",
-            starts_at__lt=day_end,
-            ends_at__gt=day_start,
+            starts_at__lt=day_end_utc,
+            ends_at__gt=day_start_utc,
         ).values_list("starts_at", "ends_at")
     )
 
     slots: list[str] = []
-    slot_start = day_start
-    while slot_start < day_end:
-        slot_end = slot_start + timedelta(minutes=slot_minutes)
-        occupied = any(start < slot_end and end > slot_start for start, end in existing)
+    slot_start_local = day_start_local
+    while slot_start_local < day_end_local:
+        slot_end_local = slot_start_local + timedelta(minutes=slot_minutes)
+        slot_start_utc = slot_start_local.astimezone(timezone.utc)
+        slot_end_utc = slot_end_local.astimezone(timezone.utc)
+        occupied = any(start < slot_end_utc and end > slot_start_utc for start, end in existing)
         if not occupied:
-            slots.append(slot_start.strftime("%H:%M"))
-        slot_start = slot_end
+            slots.append(slot_start_local.strftime("%H:%M"))
+        slot_start_local = slot_end_local
 
     return JsonResponse(
         {
             "ok": True,
             "date": date_str,
+            "timezone": tz_str,
             "slot_minutes": slot_minutes,
             "slots": slots,
         }

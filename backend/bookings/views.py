@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, time
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -12,6 +13,8 @@ from rest_framework.response import Response
 
 from .models import Booking, Service
 from .serializers import BookingSerializer, ServiceSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -191,71 +194,89 @@ class BookingViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def heatmap(self, request):
-        """Get bookings heatmap data for a specific week."""
+        """Get bookings heatmap data for a specific week. Returns empty grid on any error to avoid 500."""
         user = request.user
         week_start_str = request.query_params.get('week_start')
-        
-        if not week_start_str:
-            # Default to current week
-            today = timezone.now().date()
-            # weekday() returns 0 for Monday, 6 for Sunday
-            days_since_monday = today.weekday()
-            week_start = today - timedelta(days=days_since_monday)
-        else:
-            week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
-        
-        week_end = week_start + timedelta(days=7)
-        # Use client timezone so slots and labels match user's local time (e.g. 2 PM shows as 2 PM).
-        # In some minimal containers, the OS tz database might be missing; in that case, fall back
-        # to Django's built-in UTC tzinfo instead of raising a 500.
-        tz_str = request.query_params.get('tz') or 'UTC'
-        try:
-            tz = ZoneInfo(tz_str)
-        except Exception:
-            # Fallback that does not rely on OS tzdata being present
-            tz = timezone.utc
-        week_start_dt = datetime.combine(week_start, time.min).replace(tzinfo=tz).astimezone(timezone.utc)
-        week_end_dt = datetime.combine(week_end, time.min).replace(tzinfo=tz).astimezone(timezone.utc)
-
-        # Only confirmed bookings show as occupied; fetch once and check overlap in memory
-        bookings = list(
-            Booking.objects.filter(
-                owner=user,
-                status='confirmed',
-                starts_at__gte=week_start_dt,
-                starts_at__lt=week_end_dt
-            ).values_list('starts_at', 'ends_at')
-        )
-
-        # Build 7x48 grid: each slot is (day, time of day) in user's timezone
         week_days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        grid = []
-        for day_idx in range(7):
-            day_date = week_start + timedelta(days=day_idx)
-            day_row = []
-            for slot_idx in range(48):
-                hours = slot_idx // 2
-                minutes = (slot_idx % 2) * 30
-                slot_start_local = datetime.combine(
-                    day_date, time(hour=hours, minute=minutes, second=0, microsecond=0)
-                ).replace(tzinfo=tz)
-                slot_end_local = slot_start_local + timedelta(minutes=30)
-                slot_start_utc = slot_start_local.astimezone(timezone.utc)
-                slot_end_utc = slot_end_local.astimezone(timezone.utc)
-                has_booking = any(
-                    start < slot_end_utc and end > slot_start_utc
-                    for start, end in bookings
-                )
-                day_row.append({
-                    'day': week_days[day_idx],
-                    'label': f'{hours:02d}:{minutes:02d}',
-                    'hasBooking': has_booking
-                })
-            grid.append(day_row)
-        return Response({
-            'week_start': week_start_str or week_start.isoformat(),
-            'grid': grid
-        })
+        empty_grid = [
+            [
+                {'day': week_days[day_idx], 'label': f'{slot_idx // 2:02d}:{(slot_idx % 2) * 30:02d}', 'hasBooking': False}
+                for slot_idx in range(48)
+            ]
+            for day_idx in range(7)
+        ]
+        fallback_week_start = week_start_str
+        if not fallback_week_start:
+            today = timezone.now().date()
+            days_since_monday = today.weekday()
+            fallback_week_start = (today - timedelta(days=days_since_monday)).isoformat()
+
+        try:
+            if not week_start_str:
+                today = timezone.now().date()
+                days_since_monday = today.weekday()
+                week_start = today - timedelta(days=days_since_monday)
+            else:
+                week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+
+            week_end = week_start + timedelta(days=7)
+            # Use query param if sent, else the user's saved timezone from account settings
+            tz_str = (
+                request.query_params.get('tz')
+                or getattr(request.user, 'timezone', None)
+                or 'UTC'
+            ).strip() or 'UTC'
+            try:
+                tz = ZoneInfo(tz_str)
+            except Exception:
+                tz = timezone.utc
+
+            week_start_dt = datetime.combine(week_start, time.min).replace(tzinfo=tz).astimezone(timezone.utc)
+            week_end_dt = datetime.combine(week_end, time.min).replace(tzinfo=tz).astimezone(timezone.utc)
+
+            bookings = list(
+                Booking.objects.filter(
+                    owner=user,
+                    status='confirmed',
+                    starts_at__gte=week_start_dt,
+                    starts_at__lt=week_end_dt
+                ).values_list('starts_at', 'ends_at')
+            )
+
+            grid = []
+            for day_idx in range(7):
+                day_date = week_start + timedelta(days=day_idx)
+                day_row = []
+                for slot_idx in range(48):
+                    hours = slot_idx // 2
+                    minutes = (slot_idx % 2) * 30
+                    slot_start_local = datetime.combine(
+                        day_date, time(hour=hours, minute=minutes, second=0, microsecond=0)
+                    ).replace(tzinfo=tz)
+                    slot_end_local = slot_start_local + timedelta(minutes=30)
+                    slot_start_utc = slot_start_local.astimezone(timezone.utc)
+                    slot_end_utc = slot_end_local.astimezone(timezone.utc)
+                    has_booking = any(
+                        start < slot_end_utc and end > slot_start_utc
+                        for start, end in bookings
+                    )
+                    day_row.append({
+                        'day': week_days[day_idx],
+                        'label': f'{hours:02d}:{minutes:02d}',
+                        'hasBooking': has_booking
+                    })
+                grid.append(day_row)
+
+            return Response({
+                'week_start': week_start_str or week_start.isoformat(),
+                'grid': grid
+            })
+        except Exception as e:
+            logger.exception("bookings heatmap error: tz=%s week_start=%s", request.query_params.get('tz'), week_start_str)
+            return Response({
+                'week_start': fallback_week_start,
+                'grid': empty_grid
+            }, status=200)
 
     @action(detail=False, methods=['get'])
     def available_slots(self, request):

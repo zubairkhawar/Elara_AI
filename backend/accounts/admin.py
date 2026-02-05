@@ -66,7 +66,7 @@ class CustomUserAdmin(BaseUserAdmin):
         ),
         (
             "Settings",
-            {"fields": ("currency", "email_notifications", "sms_notifications")},
+            {"fields": ("currency", "timezone", "email_notifications", "sms_notifications")},
         ),
         (
             "Permissions",

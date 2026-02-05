@@ -75,6 +75,7 @@ export default function DashboardPage() {
   const [revenueData, setRevenueData] = useState<Array<{ label: string; value: number }>>([]);
   const [bookingsGrid, setBookingsGrid] = useState<Array<Array<{ day: string; label: string; hasBooking: boolean }>>>([]);
   const [userCurrency, setUserCurrency] = useState('USD');
+  const [userTimezone, setUserTimezone] = useState<string>('');
 
   const CURRENCY_SYMBOLS: Record<string, string> = {
     USD: '$',
@@ -98,6 +99,7 @@ export default function DashboardPage() {
         if (res.ok) {
           const data = await res.json();
           setUserCurrency(data.currency || 'USD');
+          setUserTimezone(data.timezone || '');
         }
       } catch (err) {
         console.error('Failed to fetch user data:', err);
@@ -182,7 +184,7 @@ export default function DashboardPage() {
     };
   }, [salesRange]);
 
-  // Fetch bookings heatmap when week changes (pass user timezone so 2 PM shows as 2 PM)
+  // Fetch bookings heatmap when week changes. Use saved timezone from account settings, else browser.
   useEffect(() => {
     const fetchHeatmap = async () => {
       const token =
@@ -191,10 +193,11 @@ export default function DashboardPage() {
           : null;
       if (!token || !selectedDate) return;
 
-      const tz =
+      const browserTz =
         typeof Intl !== 'undefined' && Intl.DateTimeFormat?.().resolvedOptions?.().timeZone
           ? Intl.DateTimeFormat().resolvedOptions().timeZone
           : 'UTC';
+      const tz = userTimezone || browserTz;
       const tzParam = tz ? `&tz=${encodeURIComponent(tz)}` : '';
 
       try {
@@ -215,7 +218,7 @@ export default function DashboardPage() {
     };
 
     fetchHeatmap();
-  }, [selectedDate]);
+  }, [selectedDate, userTimezone]);
 
   const formatNumber = (num: number): string => {
     return num.toLocaleString();
