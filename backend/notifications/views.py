@@ -7,7 +7,7 @@ from datetime import timedelta
 from django.http import HttpResponse, StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -132,13 +132,14 @@ def _event_stream(user_id: int):
         unregister_queue(user_id, q)
 
 
-@api_view(["GET"])
-@permission_classes([])
-def alerts_stream(request: Request) -> HttpResponse:
+def alerts_stream(request) -> HttpResponse:
     """
     Server-Sent Events stream for live alerts.
     Requires ?access_token=<jwt> (EventSource does not send custom headers).
+    Plain Django view to avoid DRF content negotiation (which returns 406 for Accept: text/event-stream).
     """
+    if request.method != "GET":
+        return HttpResponse(status=405)
     access_token = request.GET.get("access_token") or request.GET.get("token")
     user = _get_user_from_token(access_token)
     if not user:

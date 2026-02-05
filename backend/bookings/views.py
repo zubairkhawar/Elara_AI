@@ -214,13 +214,15 @@ class BookingViewSet(viewsets.ModelViewSet):
         week_start_dt = datetime.combine(week_start, time.min).replace(tzinfo=tz).astimezone(timezone.utc)
         week_end_dt = datetime.combine(week_end, time.min).replace(tzinfo=tz).astimezone(timezone.utc)
 
-        # Only confirmed bookings show as occupied; cancelled/deleted free the slot
-        bookings = Booking.objects.filter(
-            owner=user,
-            status='confirmed',
-            starts_at__gte=week_start_dt,
-            starts_at__lt=week_end_dt
-        ).select_related('client', 'service')
+        # Only confirmed bookings show as occupied; fetch once and check overlap in memory
+        bookings = list(
+            Booking.objects.filter(
+                owner=user,
+                status='confirmed',
+                starts_at__gte=week_start_dt,
+                starts_at__lt=week_end_dt
+            ).values_list('starts_at', 'ends_at')
+        )
 
         # Build 7x48 grid: each slot is (day, time of day) in user's timezone
         week_days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -237,10 +239,10 @@ class BookingViewSet(viewsets.ModelViewSet):
                 slot_end_local = slot_start_local + timedelta(minutes=30)
                 slot_start_utc = slot_start_local.astimezone(timezone.utc)
                 slot_end_utc = slot_end_local.astimezone(timezone.utc)
-                has_booking = bookings.filter(
-                    starts_at__lt=slot_end_utc,
-                    ends_at__gt=slot_start_utc
-                ).exists()
+                has_booking = any(
+                    start < slot_end_utc and end > slot_start_utc
+                    for start, end in bookings
+                )
                 day_row.append({
                     'day': week_days[day_idx],
                     'label': f'{hours:02d}:{minutes:02d}',

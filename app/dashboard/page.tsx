@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Calendar, Phone, Users, TrendingUp, Loader2 } from 'lucide-react';
+import { authenticatedFetch } from '@/utils/api';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -83,20 +84,6 @@ export default function DashboardPage() {
     PKR: '₨',
   };
 
-  const getHeaders = (): HeadersInit => {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('elara_access_token')
-        : null;
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-    return headers;
-  };
-
   // Fetch user data for currency preference
   useEffect(() => {
     const fetchUserData = async () => {
@@ -107,10 +94,7 @@ export default function DashboardPage() {
       if (!token) return;
 
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/accounts/me/`, {
-          headers: getHeaders(),
-        });
-
+        const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/accounts/me/`);
         if (res.ok) {
           const data = await res.json();
           setUserCurrency(data.currency || 'USD');
@@ -138,10 +122,7 @@ export default function DashboardPage() {
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/bookings/stats/`, {
-          headers: getHeaders(),
-        });
-
+        const res = await authenticatedFetch(`${API_BASE_URL}/api/v1/bookings/stats/`);
         if (res.ok) {
           const data = await res.json();
           setStatsData(data);
@@ -177,14 +158,12 @@ export default function DashboardPage() {
       if (!token) return;
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/v1/bookings/revenue/?range=${salesRange}`,
-          { headers: getHeaders() }
+        const res = await authenticatedFetch(
+          `${API_BASE_URL}/api/v1/bookings/revenue/?range=${salesRange}`
         );
-
         if (res.ok) {
           const data = await res.json();
-          setRevenueData(data);
+          setRevenueData(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.error('Failed to fetch revenue:', err);
@@ -219,17 +198,19 @@ export default function DashboardPage() {
       const tzParam = tz ? `&tz=${encodeURIComponent(tz)}` : '';
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/v1/bookings/heatmap/?week_start=${selectedDate}${tzParam}`,
-          { headers: getHeaders() }
+        const res = await authenticatedFetch(
+          `${API_BASE_URL}/api/v1/bookings/heatmap/?week_start=${selectedDate}${tzParam}`
         );
-
         if (res.ok) {
           const data = await res.json();
-          setBookingsGrid(data.grid || []);
+          const grid = data?.grid;
+          setBookingsGrid(Array.isArray(grid) && grid.length === 7 ? grid : []);
+        } else {
+          setBookingsGrid([]);
         }
       } catch (err) {
         console.error('Failed to fetch heatmap:', err);
+        setBookingsGrid([]);
       }
     };
 
@@ -287,6 +268,12 @@ export default function DashboardPage() {
 
   // Use revenueData from API, with fallback to empty array
   const currentRevenueData = revenueData.length > 0 ? revenueData : [];
+  // Dynamic max so small values (e.g. £110) show as visible bars
+  const revenueMax = useMemo(() => {
+    if (currentRevenueData.length === 0) return 1;
+    const maxVal = Math.max(...currentRevenueData.map((e) => e.value), 0);
+    return Math.max(maxVal, 1);
+  }, [currentRevenueData]);
 
   // Time slots for 24h with 30 min intervals (00:00 → 23:30)
   const timeSlots = useMemo(
@@ -570,15 +557,17 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Sales bar chart with y-axis up to 40,000 */}
+        {/* Sales bar chart with dynamic y-axis scale */}
         <div className="h-56 sm:h-64 md:h-72 lg:h-80 bg-gray-50 rounded-xl border border-dashed border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 flex">
-          {/* Y axis */}
+          {/* Y axis - scale from 0 to revenueMax */}
           <div className="mr-3 flex flex-col justify-between text-[10px] sm:text-xs text-gray-400">
-            {[40000, 30000, 20000, 10000, 0].map((tick) => {
+            {[4, 3, 2, 1, 0].map((i) => {
+              const tick = (revenueMax * i) / 4;
               const symbol = CURRENCY_SYMBOLS[userCurrency] || '$';
+              const label = tick >= 1000 ? `${(tick / 1000).toFixed(1)}k` : Math.round(tick).toString();
               return (
-                <span key={tick}>
-                  {symbol}{(tick / 1000).toFixed(0)}k
+                <span key={i}>
+                  {symbol}{label}
                 </span>
               );
             })}
@@ -589,9 +578,7 @@ export default function DashboardPage() {
             <div className="relative h-full w-full flex items-end gap-2 sm:gap-3 md:gap-4">
               {currentRevenueData.length > 0 ? (
                 currentRevenueData.map((entry) => {
-                const maxY = 40000;
-                const clamped = Math.min(entry.value, maxY);
-                const height = (clamped / maxY) * 100;
+                const height = revenueMax > 0 ? (Math.min(entry.value, revenueMax) / revenueMax) * 100 : 0;
                 return (
                   <div
                     key={entry.label}
@@ -600,7 +587,7 @@ export default function DashboardPage() {
                     <div className="relative h-full w-full flex items-end">
                       <div
                         className="w-full rounded-md bg-gradient-to-t from-[#1E1E5F] to-[#7B4FFF] shadow-sm"
-                        style={{ height: `${Math.max(height, 6)}%` }}
+                        style={{ height: `${Math.max(height, 2)}%` }}
                       />
                       <div className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[10px] text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100">
                         <span className="font-semibold">
