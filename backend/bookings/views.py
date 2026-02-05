@@ -205,12 +205,15 @@ class BookingViewSet(viewsets.ModelViewSet):
             week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
         
         week_end = week_start + timedelta(days=7)
-        # Use client timezone so slots and labels match user's local time (e.g. 2 PM shows as 2 PM)
+        # Use client timezone so slots and labels match user's local time (e.g. 2 PM shows as 2 PM).
+        # In some minimal containers, the OS tz database might be missing; in that case, fall back
+        # to Django's built-in UTC tzinfo instead of raising a 500.
         tz_str = request.query_params.get('tz') or 'UTC'
         try:
             tz = ZoneInfo(tz_str)
         except Exception:
-            tz = ZoneInfo('UTC')
+            # Fallback that does not rely on OS tzdata being present
+            tz = timezone.utc
         week_start_dt = datetime.combine(week_start, time.min).replace(tzinfo=tz).astimezone(timezone.utc)
         week_end_dt = datetime.combine(week_end, time.min).replace(tzinfo=tz).astimezone(timezone.utc)
 
